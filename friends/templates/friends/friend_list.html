@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Friends List</h2>
+<ul>
+    {% for friend in friends %}
+        <li>
+            {{ friend.username }}
+            <a href="{% url 'chat:create_or_open_private_chat' friend.id %}">Chat</a>
+            <a href="{% url 'friends:remove_friend' friend.id %}">Remove</a>
+        </li>
+    {% empty %}
+        <li>You have no friends yet.</li>
+    {% endfor %}
+</ul>
+<a href="{% url 'friends:user_search' %}">Search Users</a>
+<a href="{% url 'friends:friend_requests' %}">View Friend Requests</a>
+{% endblock %}

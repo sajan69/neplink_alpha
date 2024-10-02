@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% load friend_extras %}
+{% block content %}
+<h2>Search Users</h2>
+<form method="get" action="{% url 'friends:user_search' %}">
+    <input type="text" name="query" placeholder="Search users...">
+    <button type="submit">Search</button>
+</form>
+
+<ul>
+    {% for user in users %}
+        <li>
+            {{ user.username }}
+            {% if friend_status|get_item:user.id == 'friend' %}
+                (Friend)
+                <a href="{% url 'friends:remove_friend' user.id %}">Remove Friend</a>
+            {% elif friend_status|get_item:user.id == 'request_sent' %}
+                (Friend Request Sent)
+            {% elif friend_status|get_item:user.id == 'request_received' %}
+                (Friend Request Received)
+                <a href="{% url 'friends:accept_friend_request' user.id %}">Accept</a>
+                <a href="{% url 'friends:reject_friend_request' user.id %}">Reject</a>
+            {% else %}
+                <a href="{% url 'friends:send_friend_request' user.username %}">Send Friend Request</a>
+            {% endif %}
+        </li>
+    {% empty %}
+        <li>No users found.</li>
+    {% endfor %}
+</ul>
+
+<a href="{% url 'friends:friend_list' %}">Back to Friends List</a>
+{% endblock %}

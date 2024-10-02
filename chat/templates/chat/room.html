@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>{{ room.name|default:"Chat" }}</h2>
+<div id="chat-messages" style="height: 400px; overflow-y: scroll;">
+    {% for message in messages %}
+        <p><strong>{{ message.sender.username }}:</strong> {{ message.content }} {{ message.timestamp }}</p>
+    {% endfor %}
+</div>
+
+<!-- Call Button -->
+<button id="start-call">Start Call</button>
+<div id="join-call-section" style="display: none;">
+    <button id="join-call">Join Call</button>
+</div>
+<div id="call-status"></div>
+<button id="end-call" style="display: none;">End Call</button>
+
+<form id="chat-form">
+    {% csrf_token %}
+    <input type="text" id="chat-message-input" required>
+    <button type="submit">Send</button>
+</form>
+
+<script>
+    const roomId = {{ room.id }};
+    const userId = {{ request.user.id }};
+    const chatSocket = new WebSocket(
+        'ws://' + window.location.host +
+        '/ws/chat/' + roomId + '/'
+    );
+
+    chatSocket.onopen = function(e) {
+        console.log('WebSocket connection opened');
+    };
+
+    chatSocket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        document.querySelector('#chat-messages').innerHTML += '<p><strong>' + data.username + ':</strong> ' + data.message + '</p>';
+    };
+
+    chatSocket.onerror = function(e) {
+        console.error('WebSocket error:', e);
+    };
+
+    chatSocket.onclose = function(e) {
+        console.error('Chat socket closed unexpectedly:', e);
+    };
+
+    document.querySelector('#chat-form').onsubmit = function(e) {
+        e.preventDefault();
+        const messageInputDom = document.querySelector('#chat-message-input');
+        const message = messageInputDom.value;
+        if (chatSocket.readyState === WebSocket.OPEN) {
+            chatSocket.send(JSON.stringify({
+                'message': message,
+                'user_id': userId
+            }));
+            messageInputDom.value = '';
+        } else {
+            console.error('WebSocket is not open. ReadyState:', chatSocket.readyState);
+        }
+    };
+</script>
+
+<script>
+    const callSocket = new WebSocket(
+        'ws://' + window.location.host + '/ws/call/' + roomId + '/'
+    );
+
+    callSocket.onopen = function(e) {
+        console.log('WebSocket connection opened for calls');
+    };
+
+    callSocket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        if (data.type === 'call_started') {
+            document.getElementById('call-status').innerText = 'Call started by ' + data.username;
+            document.getElementById('join-call-section').style.display = 'block';
+        } else if (data.type === 'call_ended') {
+            document.getElementById('call-status').innerText = 'Call has ended.';
+            document.getElementById('join-call-section').style.display = 'none';
+        }
+    };
+
+    callSocket.onerror = function(e) {
+        console.error('WebSocket error:', e);
+    };
+
+    callSocket.onclose = function(e) {
+        document.getElementById('call-status').innerText = 'Call socket closed unexpectedly';
+    };
+
+    document.getElementById('start-call').onclick = function(e) {
+        if (callSocket.readyState === WebSocket.OPEN) {
+            callSocket.send(JSON.stringify({
+                'type': 'start_call',
+                'user_id': userId
+            }));
+        }
+    };
+
+    document.getElementById('end-call').onclick = function(e) {
+        if (callSocket.readyState === WebSocket.OPEN) {
+            callSocket.send(JSON.stringify({
+                'type': 'end_call'
+            }));
+            callSocket.close();
+        }
+    };
+
+    document.getElementById('join-call').onclick = function(e) {
+        window.location.href = '/chat/call/' + roomId + '/';
+    };
+</script>
+
+{% endblock %}

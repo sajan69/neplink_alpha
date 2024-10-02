@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Call in Progress</h2>
+<div id="call-status">Connecting...</div>
+
+<!-- Video Elements for local and remote streams -->
+<video id="local-video" autoplay muted></video>
+<video id="remote-video" autoplay></video>
+
+<!-- Button to end the call -->
+<button id="end-call">End Call</button>
+
+<script>
+    const roomId = {{ room.id }};
+    const callSocket = new WebSocket(
+        'ws://' + window.location.host + '/ws/call/' + roomId + '/'
+    );
+
+    let localStream;
+    let remoteStream;
+    let peerConnection;
+
+    // Set up the RTCPeerConnection
+    const configuration = {
+        iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },  // Google STUN server
+        ],
+    };
+
+    callSocket.onopen = function(e) {
+        document.getElementById('call-status').innerText = 'Call started';
+        startCall();  // Start call when the WebSocket connection opens
+    };
+
+    function startCall() {
+        // Get access to the user's camera and microphone
+        navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+            .then(stream => {
+                localStream = stream;
+                document.getElementById('local-video').srcObject = localStream;
+
+                // Create a new RTCPeerConnection
+                peerConnection = new RTCPeerConnection(configuration);
+
+                // Add the local stream to the peer connection
+                localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+                // Listen for remote stream
+                peerConnection.ontrack = event => {
+                    remoteStream = event.streams[0];
+                    document.getElementById('remote-video').srcObject = remoteStream;
+                };
+
+                // Handle ICE candidates
+                peerConnection.onicecandidate = event => {
+                    if (event.candidate) {
+                        callSocket.send(JSON.stringify({
+                            'type': 'ice_candidate',
+                            'candidate': event.candidate,
+                        }));
+                    }
+                
+                };
+                
+
+                // Create an offer
+                return peerConnection.createOffer();
+            })
+            .then(offer => {
+                return peerConnection.setLocalDescription(offer);
+            })
+            .then(() => {
+                // Send the offer to the other peer
+                callSocket.send(JSON.stringify({
+                    'type': 'offer',
+                    'sdp': peerConnection.localDescription,
+                }));
+            })
+            .catch(error => {
+                console.error('Error accessing media devices.', error);
+            });
+    }
+
+    callSocket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+
+        if (data.type === 'answer') {
+            // When receiving an answer from the other peer
+            peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+        } else if (data.type === 'ice_candidate') {
+            // When receiving ICE candidates
+            peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+        }
+    };
+
+    document.getElementById('end-call').onclick = function() {
+        callSocket.close();  // End the WebSocket connection
+        if (peerConnection) {
+            peerConnection.close();  // Close the peer connection
+        }
+        window.location.href = '/chat/';  // Redirect back to chat
+    };
+
+    callSocket.onclose = function(e) {
+        document.getElementById('call-status').innerText = 'Call ended';
+        if (peerConnection) {
+            peerConnection.close();  // Close the peer connection on socket close
+        }
+    };
+</script>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Your Chats</h2>
+<ul>
+    {% for room in rooms %}
+        <li>
+            <a href="{% url 'chat:chat_room' room.id %}">
+                {% if room.is_group_chat %}
+                    {{ room.name }} (Group)
+                {% else %}
+                    {% for participant in room.participants.all %}
+                        {% if participant != request.user %}
+                            {{ participant.username }}
+                            <a href="{% url 'chat:call_room' room.id %}?receiver_id={{ participant.id }}">Call</a>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+            </a>
+        </li>
+    {% empty %}
+        <li>You have no active chats.</li>
+    {% endfor %}
+</ul>
+<a href="{% url 'chat:create_group_chat' %}">Create Group Chat</a>
+
+
+
+{% endblock %}

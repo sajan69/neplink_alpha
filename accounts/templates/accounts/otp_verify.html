@@ -1,0 +1,17 @@
+{% extends 'accounts/base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <h2>OTP Verification</h2>
+    <form method="post">
+        {% csrf_token %}
+        <div>
+            <label for="otp">Enter OTP:</label>
+            <input type="text" name="otp" id="otp" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Verify OTP</button>
+    </form>
+    {% if error %}
+    <p class="error">{{ error }}</p>
+{% endif %}
+</div>
+{% endblock %}

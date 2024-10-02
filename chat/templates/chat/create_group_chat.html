@@ -1,0 +1,19 @@
+<!-- templates/chat/create_group_chat.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Create Group Chat</h2>
+<form method="post">
+    {% csrf_token %}
+    <input type="text" name="name" placeholder="Group Name" required>
+    <h3>Select Participants:</h3>
+    {{friend.username }}
+    {% for friend in friends %}
+        <label>
+            <input type="checkbox" name="participants" value="{{ friend.id }}">
+            {{ friend.username }}
+        </label><br>
+    {% endfor %}
+    <button type="submit">Create Group</button>
+</form>
+{% endblock %}
