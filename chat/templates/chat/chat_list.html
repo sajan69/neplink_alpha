@@ -1,29 +1,73 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block content %}
-<h2>Your Chats</h2>
-<ul>
-    {% for room in rooms %}
-        <li>
-            <a href="{% url 'chat:chat_room' room.id %}">
-                {% if room.is_group_chat %}
-                    {{ room.name }} (Group)
-                {% else %}
-                    {% for participant in room.participants.all %}
-                        {% if participant != request.user %}
-                            {{ participant.username }}
-                            <a href="{% url 'chat:call_room' room.id %}?receiver_id={{ participant.id }}">Call</a>
-                        {% endif %}
+<style>
+    .list-group-item {
+        transition: background-color 0.3s ease;
+    }
+    .list-group-item:hover {
+        background-color: #f8f9fa;
+    }
+    .card-header .btn {
+        transition: all 0.3s ease;
+    }
+    .card-header .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+</style>
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h2 class="mb-0">Your Chats</h2>
+                    <a href="{% url 'chat:create_group_chat' %}" class="btn btn-light btn-sm">
+                        <i class="fas fa-users"></i> Create Group Chat
+                    </a>
+                </div>
+                <ul class="list-group list-group-flush">
+                    {% for room in rooms %}
+                        <li class="list-group-item">
+                            <a href="{% url 'chat:chat_room' room.id %}" class="d-flex justify-content-between align-items-center text-decoration-none">
+                                <div class="d-flex align-items-center">
+                                    {% if room.is_group_chat %}
+                                        <i class="fas fa-users fa-2x mr-3 text-primary"></i>
+                                        <div>
+                                            <span class="font-weight-bold">{{ room.name }}</span>
+                                            <small class="text-muted d-block">Group Chat</small>
+                                        </div>
+                                    {% else %}
+                                        {% for participant in room.participants.all %}
+                                            {% if participant != request.user %}
+                                                <img src="{% if participant.profile_pic %}{{ participant.profile_pic.url }}{% else %}{% static 'img/default_profile_pic.jpg' %}{% endif %}
+                                                " alt="{{ participant.username }}" class="rounded-circle mr-3" style="width: 50px; height: 50px;">
+                                                <span class="font-weight-bold">{{ participant.username }}</span>
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% endif %}
+                                </div>
+                                <i class="fas fa-chevron-right text-muted"></i>
+                            </a>
+                        </li>
+                    {% empty %}
+                        <li class="list-group-item text-center text-muted">
+                            <p class="mb-0">You have no active chats.</p>
+                            <p class="mb-0">Start a conversation with a friend or create a group chat!</p>
+                        </li>
                     {% endfor %}
-                {% endif %}
-            </a>
-        </li>
-    {% empty %}
-        <li>You have no active chats.</li>
-    {% endfor %}
-</ul>
-<a href="{% url 'chat:create_group_chat' %}">Create Group Chat</a>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
 
 
 
+<script>
+    $(document).ready(function() {
+        // Add any JavaScript functionality here if needed
+    });
+</script>
 {% endblock %}

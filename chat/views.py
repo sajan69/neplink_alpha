@@ -2,6 +2,7 @@ from datetime import timezone
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
 from django.db.models import Q
 from .models import CallLog, ChatRoom, Message
@@ -67,63 +68,30 @@ def chat_room(request, room_id):
     if not room.participants.filter(id=request.user.id).exists():
         messages.error(request, "You don't have access to this chat room.")
         return redirect('chat:chat_list')
-
-    messagess = room.messages.all()
+    messages_info = room.messages.all()
+    active_call = room.call_logs.filter(status='ongoing').first()
     
     return render(request, 'chat/room.html', {
         'room': room,
-        'messages': messagess
+        'messages': messages_info,
+        'active_call': active_call
     })
 
-from channels.layers import get_channel_layer
-from asgiref.sync import async_to_sync
-
-def notify_receiver(receiver_id, caller_id, room_id):
-    channel_layer = get_channel_layer()
-
-    # Notify the receiver of the incoming call
-    async_to_sync(channel_layer.group_send)(
-        f'incoming_calls_{receiver_id}',
-        {
-            'type': 'notify_incoming_call',
-            'caller': caller_id,
-            'room_id': room_id,
-        }
-    )
-
-
+@csrf_exempt
 @login_required
-def call_room(request, room_id):
-    room = get_object_or_404(ChatRoom, id=room_id)
-    
-    # Check if the user is in the room participants
-    if request.user not in room.participants.all():
-        return redirect('chat:chat_list')
-    
-    return render(request, 'chat/call_room.html', {'room': room})
-
-@login_required
-def start_call(request, room_id):
-    room = get_object_or_404(ChatRoom, id=room_id)
-    caller = request.user
-
-    # Here, you might need to get the receiver from the frontend or from the room participants
-    receiver_id = request.GET.get('receiver_id')
-    receiver = get_object_or_404(User, id=receiver_id)
-
-    call_log = CallLog.objects.create(room=room, caller=caller, receiver=receiver)
-    
-    return JsonResponse({'status': 'success', 'call_log_id': call_log.id})
-
-@login_required
-def end_call(request, call_log_id):
-    call_log = get_object_or_404(CallLog, id=call_log_id)
-    call_log.end_time = timezone.now()
-    call_log.status = 'ended'
-    call_log.save()
-
-    # Optionally, you can add more logic for cleaning up after a call ends
-    # For example, you can delete the call log if the call was too short
-    # or if the call was not answered
-
-    return JsonResponse({'status': 'success'})
+def upload_file(request):
+    if request.method == 'POST':
+        file = request.FILES.get('file')
+        room_id = request.POST.get('room_id')
+        room = ChatRoom.objects.get(id=room_id)
+        
+        message = Message.objects.create(
+            sender=request.user,
+            room=room,
+            content=f"Shared file: {file.name}",
+            is_file=True,
+            file=file
+        )
+        
+        return JsonResponse({'file_url': message.file.url})
+    return JsonResponse({'error': 'Invalid request'}, status=400)

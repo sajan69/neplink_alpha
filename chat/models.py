@@ -32,7 +32,13 @@ class CallLog(models.Model):
     receiver = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='receiver_logs')
     start_time = models.DateTimeField(auto_now_add=True)
     end_time = models.DateTimeField(null=True, blank=True)
+    total_time = models.DurationField(null=True, blank=True)
     status = models.CharField(max_length=10, choices=[('ongoing', 'Ongoing'), ('ended', 'Ended')], default='ongoing')
 
     def __str__(self):
         return f'Call from {self.caller.username} to {self.receiver.username} in {self.room.name}'
+    
+    def save(self, *args, **kwargs):
+        if self.end_time and self.start_time:
+            self.total_time = self.end_time - self.start_time
+        super().save(*args, **kwargs)

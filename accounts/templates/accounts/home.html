@@ -1,8 +1,77 @@
-{% include "accounts/base.html" %}
+{% extends "base.html" %}
+{% load static %}
 
 {% block content %}
 <div class="container mt-5">
-    <h2>Welcome to the Home Page</h2>
-    <p>This is the home page of the accounts app.</p>
+    <div class="row">
+        <div class="col-lg-8 mx-auto text-center">
+            <h1 class="display-4 mb-4">Welcome to NepLink</h1>
+            <p class="lead mb-5">Connect with friends, share moments, and explore new relationships.</p>
+        </div>
+    </div>
+
+    {% if user.is_authenticated %}
+        <div class="row mb-5">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body text-center">
+                        {% if user.profile_pic %}
+                            <img src="{{ user.profile_pic.url }}" class="img-fluid rounded-circle" style="width: 100px; height: 100px;">
+                        {% else %}
+                            <img src="{% static 'img/default_profile_pic.jpg' %}" class="img-fluid rounded-circle" style="width: 100px; height: 100px;">
+                        {% endif %}
+                        <h5 class="card-title">{{ user.username }}</h5>
+                        <p class="card-text">Welcome back! Ready to connect?</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Your Network</h5>
+                        <p class="card-text">Stay connected with your friends and expand your circle.</p>
+                        <a href="{% url 'friends:friend_list' %}" class="btn btn-primary">View Friends</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Your Conversations</h5>
+                        <p class="card-text">Catch up on your latest chats and messages.</p>
+                        <a href="{% url 'chat:chat_list' %}" class="btn btn-primary">View Chats</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">What's on your mind?</h5>
+                        <form>
+                            <div class="form-group">
+                                <textarea class="form-control" rows="3" placeholder="Share your thoughts..."></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary mt-2">Post</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="row">
+            <div class="col-lg-6 mx-auto">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h2 class="card-title mb-4">Join NepLink Today</h2>
+                        <p class="card-text mb-4">Create an account to connect with friends, share experiences, and explore a world of possibilities.</p>
+                        <a href="{% url 'accounts:signup' %}" class="btn btn-primary btn-lg mr-2">Sign Up</a>
+                        <a href="{% url 'accounts:login' %}" class="btn btn-outline-primary btn-lg">Log In</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
 </div>
 {% endblock %}
