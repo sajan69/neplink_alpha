@@ -1,23 +1,39 @@
 {% extends 'base.html' %}
 {% block content %}
 <div class="container mt-5">
-    <h2>Login</h2>
-    <form method="post">
-        {% csrf_token %}
-        <div>
-            <label for="username">Username:</label>
-            <input type="text" name="username" id="username" required>
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="mb-0">Login</h2>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Username:</label>
+                            <input type="text" name="username" id="username" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password:</label>
+                            <input type="password" name="password" id="password" class="form-control" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Login</button>
+                    </form>
+                    {% if error %}
+                    <div class="alert alert-danger mt-3" role="alert">
+                        {{ error }}
+                    </div>
+                    {% endif %}
+                    <div class="mt-3 text-center">
+                        <a href="{% url 'accounts:password_reset' %}" class="text-decoration-none">Forgot Password?</a>
+                    </div>
+                    <div class="mt-2 text-center">
+                        Don't have an account? <a href="{% url 'accounts:register' %}" class="text-decoration-none">Register</a>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div>
-            <label for="password">Password:</label>
-            <input type="password" name="password" id="password" required>
-        </div>
-        <button type="submit" class="btn btn-primary">Login</button>
-    </form>
-    {% if error %}
-    <p class="error">{{ error }}</p>
-    {% endif %}
-    <a href="{% url 'accounts:password_reset' %}">Forgot Password?</a>
-    <a href="{% url 'accounts:register' %}">Register</a>
+    </div>
 </div>
 {% endblock %}

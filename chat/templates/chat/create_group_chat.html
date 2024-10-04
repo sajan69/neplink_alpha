@@ -1,19 +1,123 @@
-<!-- templates/chat/create_group_chat.html -->
 {% extends 'base.html' %}
+{% load static %}
 
 {% block content %}
-<h2>Create Group Chat</h2>
-<form method="post">
-    {% csrf_token %}
-    <input type="text" name="name" placeholder="Group Name" required>
-    <h3>Select Participants:</h3>
-    {{friend.username }}
-    {% for friend in friends %}
-        <label>
-            <input type="checkbox" name="participants" value="{{ friend.id }}">
-            {{ friend.username }}
-        </label><br>
-    {% endfor %}
-    <button type="submit">Create Group</button>
-</form>
+<style>
+    .participant-item:hover {
+        background-color: #f8f9fa;
+    }
+    .selected-participant {
+        background-color: #e9ecef;
+        border-radius: 20px;
+        padding: 5px 10px;
+        margin-right: 5px;
+        margin-bottom: 5px;
+        display: inline-block;
+    }
+    .remove-participant {
+        cursor: pointer;
+        margin-left: 5px;
+    }
+</style>
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="mb-0">Create Group Chat</h2>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="createGroupForm">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="groupName" class="form-label">Group Name</label>
+                            <input type="text" class="form-control" id="groupName" name="name" placeholder="Enter group name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Select Participants</label>
+                            <div class="input-group mb-3">
+                                <input type="text" class="form-control" id="participantSearch" placeholder="Search friends...">
+                                <button class="btn btn-outline-secondary" type="button" id="clearSearch">Clear</button>
+                            </div>
+                            <div class="participant-list" style="max-height: 300px; overflow-y: auto;">
+                                {% for friend in friends %}
+                                    <div class="form-check participant-item">
+                                        <input class="form-check-input" type="checkbox" name="participants" value="{{ friend.id }}" id="friend{{ friend.id }}">
+                                        <label class="form-check-label d-flex align-items-center" for="friend{{ friend.id }}">
+                                            <img src="{% static 'images/default-avatar.png' %}" alt="{{ friend.username }}" class="rounded-circle mr-2" style="width: 30px; height: 30px;">
+                                            <span>{{ friend.username }}</span>
+                                        </label>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Selected Participants: <span id="selectedCount">0</span></label>
+                            <div id="selectedParticipants" class="d-flex flex-wrap gap-2"></div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Create Group</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    $(document).ready(function() {
+        const participantSearch = $('#participantSearch');
+        const clearSearch = $('#clearSearch');
+        const participantItems = $('.participant-item');
+        const selectedParticipants = $('#selectedParticipants');
+        const selectedCount = $('#selectedCount');
+        const form = $('#createGroupForm');
+
+        function updateSelectedParticipants() {
+            selectedParticipants.empty();
+            let count = 0;
+            $('input[name="participants"]:checked').each(function() {
+                const id = $(this).val();
+                const name = $(`label[for="friend${id}"] span`).text();
+                selectedParticipants.append(`
+                    <div class="selected-participant" data-id="${id}">
+                        ${name}
+                        <span class="remove-participant">&times;</span>
+                    </div>
+                `);
+                count++;
+            });
+            selectedCount.text(count);
+        }
+
+        participantSearch.on('input', function() {
+            const query = $(this).val().toLowerCase();
+            participantItems.each(function() {
+                const username = $(this).find('label span').text().toLowerCase();
+                $(this).toggle(username.includes(query));
+            });
+        });
+
+        clearSearch.click(function() {
+            participantSearch.val('');
+            participantItems.show();
+        });
+
+        $('input[name="participants"]').change(updateSelectedParticipants);
+
+        selectedParticipants.on('click', '.remove-participant', function() {
+            const id = $(this).parent().data('id');
+            $(`#friend${id}`).prop('checked', false);
+            updateSelectedParticipants();
+        });
+
+        form.submit(function(e) {
+            if ($('input[name="participants"]:checked').length === 0) {
+                e.preventDefault();
+                alert('Please select at least one participant for the group chat.');
+            }
+        });
+    });
+</script>
 {% endblock %}
