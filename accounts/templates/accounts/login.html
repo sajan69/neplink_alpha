@@ -1,4 +1,7 @@
 {% extends 'base.html' %}
+{% load socialaccount %}
+
+
 {% block content %}
 <div class="container mt-5">
     <div class="row justify-content-center">
@@ -20,11 +23,17 @@
                         </div>
                         <button type="submit" class="btn btn-primary w-100">Login</button>
                     </form>
-                    {% if error %}
-                    <div class="alert alert-danger mt-3" role="alert">
-                        {{ error }}
+                    <div class="mt-3">
+                        <hr>
+                        <p class="text-center">Or</p>
                     </div>
-                    {% endif %}
+                    <div class="mt-3">
+                        <a href="{% provider_login_url 'google' %}
+                        " class="btn btn-outline-dark w-100">
+                            <i class="fab fa-google me-2"></i> Sign up with Google
+                        </a>
+                    </div>
+                    
                     <div class="mt-3 text-center">
                         <a href="{% url 'accounts:password_reset' %}" class="text-decoration-none">Forgot Password?</a>
                     </div>

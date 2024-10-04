@@ -31,7 +31,8 @@ def create_or_open_private_chat(request, friend_id):
     ).first()
 
     if not room:
-        room = ChatRoom.objects.create(is_group_chat=False)
+        room_name = f"{request.user.username} - {friend.username}"
+        room = ChatRoom.objects.create(is_group_chat=False, name=room_name)
         room.participants.add(request.user, friend)
 
     return redirect('chat:chat_room', room_id=room.id)
@@ -65,33 +66,94 @@ def create_group_chat(request):
 @login_required
 def chat_room(request, room_id):
     room = get_object_or_404(ChatRoom, id=room_id)
+    rooms = ChatRoom.objects.filter(participants=request.user)
+    messages_info = room.messages.all()
+    
     if not room.participants.filter(id=request.user.id).exists():
         messages.error(request, "You don't have access to this chat room.")
         return redirect('chat:chat_list')
-    messages_info = room.messages.all()
+    print(messages_info)
     active_call = room.call_logs.filter(status='ongoing').first()
     
     return render(request, 'chat/room.html', {
         'room': room,
         'messages': messages_info,
-        'active_call': active_call
+        'active_call': active_call,
+        'rooms': rooms
+    })
+
+@csrf_exempt
+def upload_file(request):
+    if request.method == 'POST':
+        room_id = request.POST.get('room_id')
+        user_id = request.POST.get('user_id')
+        uploaded_file = request.FILES['file']
+
+        user = User.objects.get(id=user_id)
+        room = ChatRoom.objects.get(id=room_id)
+        
+        message = Message.objects.create(
+            sender=user,
+            room=room,
+            content=f"Shared file: {uploaded_file.name}",
+            is_file=True,
+            file=uploaded_file  # File will be stored correctly
+        )
+        print(f'File uploaded: {message.file.url}')
+        return JsonResponse({'file_url': message.file.url})
+
+from agora_token_builder.RtcTokenBuilder import Role_Publisher
+from agora_token_builder import RtcTokenBuilder
+from django.conf import settings
+import time
+
+@csrf_exempt
+@login_required
+def generate_agora_token(request, room_id):
+    # Retrieve the chat room and check if the user is a participant
+    room = get_object_or_404(ChatRoom, id=room_id)
+    if not room.is_participant(request.user):
+        return JsonResponse({'error': 'Access denied'}, status=403)
+
+    # Generate the channel name and token expiration
+    channel_name = f"channel_{room.id}_{int(time.time())}"
+    expiration_time_in_seconds = 3600  # Token valid for 1 hour
+    current_timestamp = int(time.time())
+    privilege_expired_ts = current_timestamp + expiration_time_in_seconds
+
+    # Generate Agora token using RtcTokenBuilder
+    token = RtcTokenBuilder.buildTokenWithUid(
+        settings.AGORA_APP_ID, 
+        settings.AGORA_APP_CERTIFICATE, 
+        channel_name, 
+        request.user.id, 
+        Role_Publisher,  # Use the correct role here
+        privilege_expired_ts
+    )
+
+    # Create a new call log entry
+    call_log = CallLog.objects.create(
+        room=room,
+        caller=request.user,
+        agora_channel=channel_name
+    )
+    room.active_call = call_log
+    room.save()
+
+    # Return the generated token and other information as a JSON response
+    return JsonResponse({
+        'token': token,
+        'app_id': settings.AGORA_APP_ID,
+        'channel_name': channel_name,
+        'call_log_id': call_log.id
     })
 
 @csrf_exempt
 @login_required
-def upload_file(request):
-    if request.method == 'POST':
-        file = request.FILES.get('file')
-        room_id = request.POST.get('room_id')
-        room = ChatRoom.objects.get(id=room_id)
-        
-        message = Message.objects.create(
-            sender=request.user,
-            room=room,
-            content=f"Shared file: {file.name}",
-            is_file=True,
-            file=file
-        )
-        
-        return JsonResponse({'file_url': message.file.url})
-    return JsonResponse({'error': 'Invalid request'}, status=400)
+def end_call(request, call_log_id):
+    call_log = get_object_or_404(CallLog, id=call_log_id)
+    if call_log.caller != request.user and call_log.receiver != request.user:
+        return JsonResponse({'error': 'Access denied'}, status=403)
+
+    call_log.end_call()
+    return JsonResponse({'status': 'success'})

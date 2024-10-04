@@ -110,6 +110,9 @@ class UserPasswordChangeView(View):
         request.user.set_password(new_password1)
         request.user.save()
         return redirect('accounts:login')
+    
+
+   
 
 @method_decorator(login_required, name='dispatch')
 class HomeView(TemplateView):

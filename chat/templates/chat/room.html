@@ -1,22 +1,43 @@
 {% extends 'base.html' %}
-{% load static %}
 {% load file_seperator %}
-
+{% load static %}
 
 {% block content %}
 <div class="container-fluid mt-3">
     <div class="row">
-        <div class="col-md-8">
-            <div class="card">
+        <div class="col-md-3">
+            <div class="card mb-3">
                 <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><a href="{% url 'chat:chat_list' %}" class="text-decoration-none text-white">Chat Rooms</a></h5>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        {% for room in rooms %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <a href="{% url 'chat:chat_room' room.id %}" class="text-decoration-none text-dark">{{ room.name }}</a>
+                                <button class="btn btn-sm btn-outline-success call-btn" data-room-id="{{ room.id }}">
+                                    <i class="fas fa-phone-alt"></i>
+                                </button>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-9">
+            <div class="card">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                     <h3 class="mb-0">{{ room.name|default:"Chat Room" }}</h3>
+                    <button id="join-call" class="btn btn-success">
+                        <i class="fas fa-video me-2"></i>Start Video Call
+                    </button>
                 </div>
                 <div class="card-body" style="height: 70vh;">
-                    <div id="chat-messages" class="overflow-auto mb-3" style="height: 90%;">
+                    <div id="chat-messages" class="overflow-auto mb-3" style="height: calc(100% - 60px);">
                         {% for message in messages %}
-                            <div class="mb-2">
+                            <div class="mb-3 p-2 {% if message.sender.username == request.user.username %}bg-light text-end{% endif %}">
+                                <strong>{{ message.sender.username }}:</strong>
                                 {% if message.is_file %}
-                                    <strong>{{ message.sender.username }}:</strong> Shared a file: 
                                     {% if message.file.url|file_seperator == 'image' %}
                                         <a href="{{ message.file.url }}" target="_blank">
                                             <img src="{{ message.file.url }}" class="img-thumbnail" style="max-width: 200px;">
@@ -31,9 +52,9 @@
                                         </a>
                                     {% endif %}
                                 {% else %}
-                                    <strong>{{ message.sender.username }}:</strong> {{ message.content }}
-                                    <small class="text-muted ml-2">{{ message.timestamp|date:"H:i" }}</small>
+                                    <span class="ms-2">{{ message.content }}</span>
                                 {% endif %}
+                                <small class="text-muted d-block">{{ message.timestamp|date:"H:i" }}</small>
                             </div>
                         {% endfor %}
                     </div>
@@ -41,56 +62,14 @@
                         {% csrf_token %}
                         <div class="input-group">
                             <input type="text" id="chat-message-input" class="form-control" placeholder="Type your message..." required>
-                            <div class="input-group-append">
-                                <button type="submit" class="btn btn-primary">Send</button>
-                            </div>
+                            <label for="file-input" class="btn btn-outline-secondary mb-0">
+                                <i class="fas fa-paperclip"></i>
+                            </label>
+                            <input type="file" id="file-input" style="display: none;">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane me-2"></i>Send
+                            </button>
                         </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card mb-3">
-                <div class="card-header bg-info text-white">
-                    <h5 class="mb-0">Video Call</h5>
-                </div>
-                <div class="card-body">
-                    <div id="video-container" class="d-none">
-                        <div class="row">
-                            <div class="col-6">
-                                <video id="local-video" class="w-100" autoplay muted></video>
-                            </div>
-                            <div class="col-6">
-                                <video id="remote-video" class="w-100" autoplay></video>
-                            </div>
-                        </div>
-                    </div>
-                    <div id="call-controls" class="mt-3">
-                        <button id="start-audio-call" class="btn btn-outline-primary mr-2">
-                            <i class="fas fa-phone"></i> Audio Call
-                        </button>
-                        <button id="start-video-call" class="btn btn-outline-success mr-2">
-                            <i class="fas fa-video"></i> Video Call
-                        </button>
-                        <button id="end-call" class="btn btn-outline-danger d-none">
-                            <i class="fas fa-phone-slash"></i> End Call
-                        </button>
-                    </div>
-                    <div id="call-status" class="mt-2 text-center"></div>
-                </div>
-            </div>
-            <div class="card">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0">Share File</h5>
-                </div>
-                <div class="card-body">
-                    <form id="file-form" enctype="multipart/form-data">
-                        {% csrf_token %}
-                        <div class="custom-file mb-3">
-                            <input type="file" class="custom-file-input" id="file-input" required>
-                            <label class="custom-file-label" for="file-input">Choose file</label>
-                        </div>
-                        <button type="submit" class="btn btn-success btn-block">Share File</button>
                     </form>
                 </div>
             </div>
@@ -98,122 +77,135 @@
     </div>
 </div>
 
-<div id="call-notification" class="toast" style="position: absolute; top: 20px; right: 20px;" data-autohide="false">
-    <div class="toast-header">
-        <strong class="mr-auto">Incoming Call</strong>
-        <button type="button" class="ml-2 mb-1 close" data-dismiss="toast">&times;</button>
-    </div>
-    <div class="toast-body">
-        <p id="call-notification-message"></p>
-        <button id="accept-call" class="btn btn-success btn-sm mr-2">Accept</button>
-        <button id="decline-call" class="btn btn-danger btn-sm">Decline</button>
+<div class="modal fade" id="videoCallModal" tabindex="-1" aria-labelledby="videoCallModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="videoCallModalLabel">Video Call</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="video-container" class="row">
+                    <div class="col-md-6">
+                        <div id="local-video" class="w-100 h-100 bg-dark"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <div id="remote-video" class="w-100 h-100 bg-dark"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="leave-call" class="btn btn-danger">
+                    <i class="fas fa-phone-slash me-2"></i>End Call
+                </button>
+            </div>
+        </div>
     </div>
 </div>
 
+<script src="https://download.agora.io/sdk/release/AgoraRTC_N.js"></script>
 <script>
     const roomId = {{ room.id }};
     const userId = {{ request.user.id }};
+    let currentCallLogId = null;
+
     const chatSocket = new WebSocket(
         'ws://' + window.location.host +
         '/ws/chat/' + roomId + '/'
     );
-    const callSocket = new WebSocket(
-        'ws://' + window.location.host +
-        '/ws/call/' + roomId + '/'
-    );
 
-    let localStream;
-    let peerConnection;
-    const configuration = {'iceServers': [{'urls': 'stun:stun.l.google.com:19302'}]};
-    let currentCallType;
+    chatSocket.onopen = function(e) {
+        console.log('WebSocket connection established');
+    };
 
-    // Chat WebSocket handlers
     chatSocket.onmessage = function(e) {
         const data = JSON.parse(e.data);
+        console.log(data);
         const chatMessages = document.querySelector('#chat-messages');
+        let messageHTML = `
+            <div class="mb-3 p-2 ${data.username === '{{ request.user.username }}' ? 'bg-light text-end' : ''}">
+                <strong>${data.username}:</strong> 
+        `;
+        
         if (data.is_file) {
-            chatMessages.innerHTML += `
-                <div class="mb-2">
-                    <strong>${data.username}:</strong> Shared a file: 
-                    <a href="${data.file_url}" target="_blank" class="btn btn-sm btn-outline-primary">
+            
+              // Extract file extension from the URL
+        const fileUrl = data.file_url;
+        const fileExtension = fileUrl.split('.').pop().toLowerCase(); // Get the file extension
+
+        // Determine file type based on the extension
+        let fileType = '';
+        if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg'].includes(fileExtension)) {
+            fileType = 'image';
+        } else if (['mp4', 'mkv', 'webm', 'ogg'].includes(fileExtension)) {
+            fileType = 'video';
+        } else if (['mp3', 'wav', 'ogg'].includes(fileExtension)) {
+            fileType = 'audio';
+        } else {
+            fileType = 'other';
+        }
+
+            if (fileType === 'image') {
+                messageHTML += `
+                    <a href="${fileUrl}" target="_blank">
+                        <img src="${fileUrl}" class="img-thumbnail" style="max-width: 200px;" alt="Image File">
+                    </a>
+                `;
+            } else if (fileType === 'video') {
+                messageHTML += `
+                    <video src="${fileUrl}" controls class="w-100"></video>
+                `;
+            } else if (fileType === 'audio') {
+                messageHTML += `
+                    <audio src="${fileUrl}" controls></audio>
+                `;
+            } else {
+                messageHTML += `
+                    <a href="${fileUrl}" target="_blank" class="btn btn-sm btn-outline-primary">
                         <i class="fas fa-file"></i> ${data.file_name}
                     </a>
-                </div>
-            `;
+                `;
+            }
         } else {
-            chatMessages.innerHTML += `
-                <div class="mb-2">
-                    <strong>${data.username}:</strong> ${data.message}
-                    <small class="text-muted ml-2">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</small>
-                </div>
-            `;
+            messageHTML += `<span class="ms-2">${data.message}</span>`;
         }
+        
+        messageHTML += `
+                <small class="text-muted d-block">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</small>
+            </div>
+        `;
+        
+        chatMessages.innerHTML += messageHTML;
         chatMessages.scrollTop = chatMessages.scrollHeight;
     };
 
-    // Call WebSocket handlers
-    callSocket.onmessage = function(e) {
-        const data = JSON.parse(e.data);
-        switch(data.type) {
-            case 'call_started':
-                if (data.user_id !== userId) {
-                    showCallNotification(data.username, data.call_type);
-                } else {
-                    document.querySelector('#call-status').innerHTML = '<span class="text-info">Calling...</span>';
-                    document.querySelector('#end-call').classList.remove('d-none');
-                }
-                break;
-            case 'call_ended':
-                document.querySelector('#call-status').innerHTML = '<span class="text-danger">Call ended</span>';
-                document.querySelector('#end-call').classList.add('d-none');
-                endCall();
-                break;
-            case 'offer':
-                handleOffer(data.offer);
-                break;
-            case 'answer':
-                handleAnswer(data.answer);
-                break;
-            case 'new_ice_candidate':
-                handleNewICECandidate(data.candidate);
-                break;
-            case 'file_shared':
-                const chatMessages = document.querySelector('#chat-messages');
-                chatMessages.innerHTML += `
-                    <div class="mb-2">
-                        <strong>${data.username}:</strong> Shared a file: 
-                        <a href="${data.file_url}" target="_blank" class="btn btn-sm btn-outline-primary">
-                            <i class="fas fa-file"></i> ${data.file_name}
-                        </a>
-                    </div>
-                `;
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-                break;
-        }
+    chatSocket.onerror = function(e) {
+        console.error('WebSocket error:', e);
+    };
+    
+    chatSocket.onclose = function(e) {
+        console.log('WebSocket connection closed');
     };
 
-    // Chat form submit handler
     document.querySelector('#chat-form').onsubmit = function(e) {
         e.preventDefault();
         const messageInputDom = document.querySelector('#chat-message-input');
         const message = messageInputDom.value;
         chatSocket.send(JSON.stringify({
+            'type': 'message',
             'message': message,
             'user_id': userId
         }));
         messageInputDom.value = '';
     };
-
-    // File form submit handler
-    document.querySelector('#file-form').onsubmit = function(e) {
-        e.preventDefault();
-        const fileInput = document.querySelector('#file-input');
-        const file = fileInput.files[0];
+    
+    document.querySelector('#file-input').onchange = function(e) {
+        const file = e.target.files[0];
         const formData = new FormData();
         formData.append('file', file);
         formData.append('room_id', roomId);
         formData.append('user_id', userId);
-
+    
         fetch('/chat/upload_file/', {
             method: 'POST',
             body: formData,
@@ -223,207 +215,108 @@
         })
         .then(response => response.json())
         .then(data => {
-            callSocket.send(JSON.stringify({
+            chatSocket.send(JSON.stringify({
                 'type': 'file_share',
                 'user_id': userId,
                 'file_url': data.file_url,
-                'file_name': file.name
+                'file_name': file.name,
+                'file_type': data.file_type
             }));
+            console.log('File uploaded:', data);
+        })
+        .catch(error => {
+            console.error('Error uploading file:', error);
         });
-        fileInput.value = '';
-        document.querySelector('.custom-file-label').textContent = 'Choose file';
+    
+        e.target.value = '';
     };
 
-    // Update file input label
-    document.querySelector('#file-input').addEventListener('change', function(e) {
-        const fileName = e.target.files[0].name;
-        const label = e.target.nextElementSibling;
-        label.textContent = fileName;
-    });
-
-    // Call control handlers
-    document.querySelector('#start-audio-call').onclick = function() {
-        startCall('audio');
+    let rtc = {
+        client: null,
+        localAudioTrack: null,
+        localVideoTrack: null
     };
 
-    document.querySelector('#start-video-call').onclick = function() {
-        startCall('video');
+    let options = {
+        appId: null,
+        channel: null,
+        token: null,
+        uid: userId
     };
 
-    document.querySelector('#end-call').onclick = function() {
-        endCall();
-        callSocket.send(JSON.stringify({
-            'type': 'end_call',
-            'user_id': userId
-        }));
-    };
-
-    document.querySelector('#accept-call').onclick = function() {
-        acceptCall();
-    };
-
-    document.querySelector('#decline-call').onclick = function() {
-        declineCall();
-    };
-
-    async function startCall(callType) {
+    async function joinCall() {
         try {
-            currentCallType = callType;
-            let stream;
-    
-            if (!navigator.mediaDevices) {
-                console.error('mediaDevices API not supported');
-                alert('Your browser does not support the mediaDevices API. Please use a modern browser or enable HTTPS.');
-                return;
-            }
-    
+            const response = await fetch(`/chat/generate_agora_token/${roomId}/`);
+            const data = await response.json();
+            
+            options.appId = data.app_id;
+            options.channel = data.channel_name;
+            options.token = data.token;
+            currentCallLogId = data.call_log_id;
+
+            rtc.client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+            
+            await rtc.client.join(options.appId, options.channel, options.token, options.uid);
+            
+            rtc.localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+            rtc.localVideoTrack = await AgoraRTC.createCameraVideoTrack();
+            
+            await rtc.client.publish([rtc.localAudioTrack, rtc.localVideoTrack]);
+            
+            const localVideoContainer = document.getElementById("local-video");
+            rtc.localVideoTrack.play(localVideoContainer);
+            
+            $('#videoCallModal').modal('show');
+            
+            rtc.client.on("user-published", async (user, mediaType) => {
+                await rtc.client.subscribe(user, mediaType);
+                if (mediaType === "video") {
+                    const remoteVideoContainer = document.getElementById("remote-video");
+                    user.videoTrack.play(remoteVideoContainer);
+                }
+                if (mediaType === "audio") {
+                    user.audioTrack.play();
+                }
+            });
+
+        } catch (error) {
+            console.error("Error joining call:", error);
+        }
+    }
+
+    async function leaveCall() {
+        rtc.localAudioTrack.close();
+        rtc.localVideoTrack.close();
+        await rtc.client.leave();
+        $('#videoCallModal').modal('hide');
+
+        if (currentCallLogId) {
             try {
-                stream = await navigator.mediaDevices.getUserMedia({
-                    audio: true,
-                    video: callType === 'video'
+                const response = await fetch(`/chat/end_call/${currentCallLogId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    }
                 });
-            } catch (err) {
-                console.error('Error accessing media devices:', err);
-                if (err.name === 'NotAllowedError') {
-                    alert('Permission to access camera/microphone was denied. Please allow access and try again.');
-                } else if (err.name === 'NotFoundError') {
-                    alert('No camera/microphone found. Please check your devices and try again.');
+                const data = await response.json();
+                if (data.status === 'success') {
+                    console.log('Call ended successfully');
                 } else {
-                    alert('Error accessing media devices. Please check your settings and try again.');
+                    console.error('Error ending call:', data.error);
                 }
-                return;
+            } catch (error) {
+                console.error('Error ending call:', error);
             }
-    
-            localStream = stream;
-            document.getElementById('local-video').srcObject = stream;
-            document.getElementById('video-container').classList.remove('d-none');
-            
-            peerConnection = new RTCPeerConnection(configuration);
-            
-            localStream.getTracks().forEach(track => {
-                peerConnection.addTrack(track, localStream);
-            });
-            
-            peerConnection.ontrack = event => {
-                document.getElementById('remote-video').srcObject = event.streams[0];
-            };
-            
-            peerConnection.onicecandidate = event => {
-                if (event.candidate) {
-                    callSocket.send(JSON.stringify({
-                        'type': 'new_ice_candidate',
-                        'candidate': event.candidate
-                    }));
-                }
-            };
-            
-            const offer = await peerConnection.createOffer();
-            await peerConnection.setLocalDescription(offer);
-            
-            callSocket.send(JSON.stringify({
-                'type': 'start_call',
-                'user_id': userId,
-                'call_type': callType
-            }));
-    
-            callSocket.send(JSON.stringify({
-                'type': 'offer',
-                'offer': offer
-            }));
-        } catch (err) {
-            console.error('Error starting call:', err);
-            alert('An error occurred while starting the call. Please try again.');
+            currentCallLogId = null;
         }
     }
 
-    async function handleOffer(offer) {
-        try {
-            peerConnection = new RTCPeerConnection(configuration);
-            
-            peerConnection.ontrack = event => {
-                document.getElementById('remote-video').srcObject = event.streams[0];
-            };
-            
-            peerConnection.onicecandidate = event => {
-                if (event.candidate) {
-                    callSocket.send(JSON.stringify({
-                        'type': 'new_ice_candidate',
-                        'candidate': event.candidate
-                    }));
-                }
-            };
-            
-            await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
-            const answer = await peerConnection.createAnswer();
-            await peerConnection.setLocalDescription(answer);
-            
-            callSocket.send(JSON.stringify({
-                'type': 'answer',
-                'answer': answer
-            }));
-        } catch (err) {
-            console.error('Error handling offer:', err);
-        }
-    }
+    document.getElementById('join-call').addEventListener('click', joinCall);
+    document.getElementById('leave-call').addEventListener('click', leaveCall);
 
-    async function handleAnswer(answer) {
-        try {
-            await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
-        } catch (err) {
-            console.error('Error handling answer:', err);
-        }
-    }
-
-    async function handleNewICECandidate(candidate) {
-        try {
-            await peerConnection.addIceCandidate(candidate);
-        } catch (err) {
-            console.error('Error adding received ice candidate:', err);
-        }
-    }
-
-    function endCall() {
-        if (peerConnection) {
-            peerConnection.close();
-        }
-        if (localStream) {
-            localStream.getTracks().forEach(track => track.stop());
-        }
-        document.getElementById('local-video').srcObject = null;
-        document.getElementById('remote-video').srcObject = null;
-        document.getElementById('video-container').classList.add('d-none');
-        $('.toast').toast('hide');
-    }
-
-    function showCallNotification(callerName, callType) {
-        const messageElement = document.getElementById('call-notification-message');
-        messageElement.textContent = `${callerName} is calling you (${callType})`;
-        $('.toast').toast('show');
-    }
-
-    async function acceptCall() {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({
-                audio: true,
-                video: currentCallType === 'video'
-            });
-            localStream = stream;
-            document.getElementById('local-video').srcObject = stream;
-            document.getElementById('video-container').classList.remove('d-none');
-            $('.toast').toast('hide');
-            document.querySelector('#call-status').innerHTML = '<span class="text-success">Call in progress</span>';
-            document.querySelector('#end-call').classList.remove('d-none');
-        } catch (err) {
-            console.error('Error accepting call:', err);
-        }
-    }
-
-    function declineCall() {
-        callSocket.send(JSON.stringify({
-            'type': 'end_call',
-            'user_id': userId
-        }));
-        $('.toast').toast('hide');
-    }
+    // Ensure the modal is hidden when closed
+    $('#videoCallModal').on('hidden.bs.modal', function (e) {
+        leaveCall();
+    });
 </script>
 {% endblock %}
