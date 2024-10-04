@@ -67,6 +67,8 @@ class OTPVerificationView(View):
         if otp == "123456":  # Check OTP
             return redirect('accounts:password_reset_confirm')
         return render(request, self.template_name, {'error': 'Invalid OTP'})
+    
+
 
 class PasswordResetConfirmView(View):
     template_name = 'accounts/password_reset_confirm.html'
