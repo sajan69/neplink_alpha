@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 import os
 from pathlib import Path
+from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -21,12 +22,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-@-nerfqpwnm1k_2#(1l6lkwat0_@mvdnl#ba$szgjows#v-ci_'
+# Quick-start development settings - unsuitable for production
+SECRET_KEY = config('SECRET_KEY') 
+DEBUG = config('DEBUG', default=False, cast=bool)  # Cast to boolean
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*').split(',')  # Split if there are multiple hosts
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -62,8 +62,8 @@ MIDDLEWARE = [
     'allauth.account.middleware.AccountMiddleware',
 ]
 
-AGORA_APP_ID='8b4811abd0004787a2c2ff4348868101'
-AGORA_APP_CERTIFICATE="047865bf62c149afb6c595663167563b"
+AGORA_APP_ID = config('AGORA_APP_ID')
+AGORA_APP_CERTIFICATE = config('AGORA_APP_CERTIFICATE')
 
 ROOT_URLCONF = 'neplink.urls'
 
@@ -121,9 +121,9 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'sajanac46@gmail.com'
-EMAIL_HOST_PASSWORD = 'qpur gyui tgrz plhb'
-DEFAULT_FROM_EMAIL = 'sajanac46@gmail.com'
+EMAIL_HOST_USER = config('EMAIL_HOST_USER') 
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD') 
+DEFAULT_FROM_EMAIL = config('EMAIL_HOST_USER')  
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
