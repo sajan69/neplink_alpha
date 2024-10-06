@@ -1,7 +1,7 @@
-{% extends 'base.html' %}
+{% extends 'left_column.html' %}
 {% load static %}
 
-{% block content %}
+{% block nav_content %}
 <style>
     .list-group-item {
         transition: background-color 0.3s ease;
@@ -19,24 +19,33 @@
 </style>
 <div class="container mt-4">
     <div class="row">
-        <div class="col-md-8 mx-auto">
+        <div class="col-md-12 mx-auto">
             <div class="card">
                 <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                     <h2 class="mb-0">Friends List</h2>
-                    <div>
-                        <a href="{% url 'friends:user_search' %}" class="btn btn-light btn-sm mr-2">
-                            <i class="fas fa-search"></i> Search Users
-                        </a>
+                    <div class = "d-flex row">
+                        <div class="col-6">
+                            
+                                <input type="text" id="friend-search-input" class="form-control" placeholder="Search friends...">
+                            
+                            <ul class="list-group list-group-flush" id="friend-list">
+                                <!-- This will be populated by the Ajax response -->
+                            </ul>
+                        </div>
+                        <div class="col-6">
+                            
+                        
                         <a href="{% url 'friends:friend_requests' %}" class="btn btn-light btn-sm">
                             <i class="fas fa-user-plus"></i> Friend Requests
                         </a>
+                        </div>
                     </div>
                 </div>
                 <ul class="list-group list-group-flush">
                     {% for friend in friends %}
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             <div class="d-flex align-items-center">
-                                <img src="{% static 'images/default-avatar.png' %}" alt="{{ friend.username }}" class="rounded-circle mr-3" style="width: 50px; height: 50px;">
+                                <img src="{% static 'img/default_profile_pic.png' %}" alt="{{ friend.username }}" class="rounded-circle mr-3" style="width: 50px; height: 50px;">
                                 <span class="font-weight-bold">{{ friend.username }}</span>
                             </div>
                             <div>
@@ -60,45 +69,49 @@
     </div>
 </div>
 
-
-
 <script>
-    $(document).ready(function() {
-        $('.remove-friend').on('click', function(e) {
-            e.preventDefault();
-            var $this = $(this);
-            var url = $this.attr('href');
-            
-            if (confirm('Are you sure you want to remove this friend?')) {
-                $.ajax({
-                    url: url,
-                    type: 'POST',
-                    data: {
-                        csrfmiddlewaretoken: '{{ csrf_token }}'
-                    },
-                    success: function(response) {
-                        if (response.status === 'success') {
-                            $this.closest('.list-group-item').fadeOut(300, function() {
-                                $(this).remove();
-                                if ($('.list-group-item').length === 0) {
-                                    $('.list-group').append(`
-                                        <li class="list-group-item text-center text-muted">
-                                            <p class="mb-0">You have no friends yet.</p>
-                                            <p class="mb-0">Use the "Search Users" button to find and add friends!</p>
-                                        </li>
-                                    `);
-                                }
-                            });
-                        } else {
-                            alert('An error occurred. Please try again.');
-                        }
-                    },
-                    error: function() {
-                        alert('An error occurred. Please try again.');
+    document.getElementById('friend-search-input').addEventListener('input', function () {
+        const query = this.value;
+        const friendList = document.getElementById('friend-list');
+
+        if (query.trim().length > 0) {
+            $.ajax({
+                url: "{% url 'friends:friend_search' %}",
+                data: {
+                    'query': query
+                },
+                success: function (data) {
+                    friendList.innerHTML = '';
+                    if (data.friends.length > 0) {
+                        data.friends.forEach(function (friend) {
+                            const friendItem = `
+                                <a href="/profile/${friend.username}/" class="">
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div class="d-flex align-items-center">
+                                        <img src="${friend.profile_pic_url}" alt="${friend.username}" class="rounded-circle mr-3" style="width: 50px; height: 50px;">
+                                        <span class="font-weight-bold">${friend.username}</span>
+                                    </div>
+                                    <div>
+                                        <a href="/chat/${friend.id}/" class="btn btn-primary btn-sm mr-2">
+                                            <i class="fas fa-comment"></i> Chat
+                                        </a>
+                                        <a href="/friends/remove/${friend.id}/" class="btn btn-danger btn-sm">
+                                            <i class="fas fa-user-minus"></i> Remove
+                                        </a>
+                                    </div>
+                                </li>
+                                </a>
+                            `;
+                            friendList.insertAdjacentHTML('beforeend', friendItem);
+                        });
+                    } else {
+                        friendList.innerHTML = '<li class="list-group-item text-center text-muted">No friends with found.</li>';
                     }
-                });
-            }
-        });
+                }
+            });
+        } else {
+            friendList.innerHTML = '<li class="list-group-item text-center text-muted">Start typing to search for friends.</li>';
+        }
     });
 </script>
 

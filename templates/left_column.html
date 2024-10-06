@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+    <div class="row">
+        <!-- Left Column -->
+        <div class="col-md-2">
+            <h1 class="mb-4">
+                <a href="{% url 'accounts:home' %}" class="text-decoration-none text-dark">
+                    <img src="{% static 'img/logo.png' %}" alt="NepLink Logo" height="30" class="me-2">
+                </a>
+            </h1>
+            <nav class="nav flex-column" style="color: #3B454F; border-radius: 5px;">
+                <a class="nav-link active"style='color: #3B454F;' href="{% url "accounts:home" %}"><i class="fas fa-home me-2"></i> Home</a>
+                <a class="nav-link" style='color: #3B454F;' href="#"><i class="fas fa-bell me-2"></i> Notifications</a>
+                <a class="nav-link" style='color: #3B454F;' href="{% url 'chat:chat_list' %}"><i class="fas fa-envelope me-2"></i> Messages</a>
+                <a class="nav-link" style='color: #3B454F;' href="{% url 'friends:friend_list' %}"><i class="fas fa-users me-2"></i> Friends</a>
+                <a class="nav-link" style='color: #3B454F;' href="{% url 'accounts:profile' user.username %}"><i class="fas fa-user me-2"></i> Profile</a>
+                <a class="nav-link" style='color: #3B454F;' href="{% url 'friends:friend_requests' %}"><i class="fas fa-user-plus me-2"></i> Friend Requests</a>
+                <a class="nav-link" style='color: #3B454F;' href="{% url 'friends:user_search' %}"><i class="fas fa-search me-2"></i> Search Users</a>
+                <a class="nav-link" style='color: #3B454F;' href="{% url 'accounts:logout' %}"><i class="fas fa-sign-out-alt me-2"></i> Logout</a>
+            </nav>
+        </div>
+
+        <!-- This block will be replaced in other templates for middle and right columns -->
+        <div class="col-md-10">
+            {% block nav_content %}
+            {% endblock %}
+        </div>
+    </div>
+{% endblock %}

@@ -1,12 +1,12 @@
-{% extends 'base.html' %}
+{% extends 'left_column.html' %}
 {% load static %}
 {% load friend_extras %}
 
-{% block content %}
+{% block nav_content %}
 <div class="container mt-4">
     <h2 class="mb-4">Search Users</h2>
     <div class="row">
-        <div class="col-md-6">
+        <div class="col-md-12">
             <div class="input-group mb-3">
                 <form method="get" action="{% url 'friends:user_search' %}">
                     <input type="text" name="query" placeholder="Search users..." class="form-control" aria-label="Search users">
@@ -26,7 +26,7 @@
             {% for user in users %}
                 <div class="list-group-item d-flex justify-content-between align-items-center">
                     <div>
-                        <img src="{% if user.profile_pic %}{{ user.profile_pic.url }}{% else %}{% static 'img/default_profile_pic.jpg' %}{% endif %} 
+                        <img src="{% if user.profile_pic %}{{ user.profile_pic.url }}{% else %}{% static 'img/default_profile_pic.png' %}{% endif %} 
                         " alt="{{ user.username }}" class="rounded-circle mr-2" style="width: 40px; height: 40px;">
                         <span>{{ user.username }}</span>
                     </div>
@@ -36,10 +36,19 @@
                             <a href="{% url 'friends:remove_friend' user.id %}" class="btn btn-sm btn-outline-danger">Remove Friend</a>
                         {% elif friend_status|get_item:user.id == 'request_sent' %}
                             <span class="badge badge-info">Friend Request Sent</span>
+                            {% for request in sent_requests %}
+                                {% if request.to_user == user %}
+                                    <a href="{% url 'friends:cancel_friend_request' request.id %}" class="btn btn-sm btn-danger">Cancel Request</a>
+                                {% endif %}
+                            {% endfor %}
                         {% elif friend_status|get_item:user.id == 'request_received' %}
                             <span class="badge badge-warning mr-2">Friend Request Received</span>
-                            <a href="{% url 'friends:accept_friend_request' user.id %}" class="btn btn-sm btn-success mr-1">Accept</a>
-                            <a href="{% url 'friends:reject_friend_request' user.id %}" class="btn btn-sm btn-danger">Reject</a>
+                            {%for request in received_requests %}
+                                {% if request.from_user == user %}
+                                    <a href="{% url 'friends:accept_friend_request' request.id %}" class="btn btn-sm btn-success mr-1">Accept</a>
+                                    <a href="{% url 'friends:reject_friend_request' request.id %}" class="btn btn-sm btn-danger">Reject</a>
+                                {% endif %}
+                            {% endfor %}
                         {% else %}
                             <a href="{% url 'friends:send_friend_request' user.username %}" class="btn btn-sm btn-primary">Send Friend Request</a>
                         {% endif %}

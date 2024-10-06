@@ -81,6 +81,27 @@ class ChatConsumer(AsyncWebsocketConsumer):
             }
         )
 
+    async def chat_incoming_call(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'incoming_call',
+            'call_log_id': event['call_log_id'],
+            'caller_name': event['caller_name'],
+            'call_type': event['call_type'],
+        }))
+
+    async def chat_call_ended(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'call_ended',
+            'call_log_id': event['call_log_id'],
+            'ended_by': event['ended_by'],
+        }))
+
+    async def chat_call_rejected(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'call_rejected',
+            'call_log_id': event['call_log_id'],
+            'rejected_by': event['rejected_by'],
+        }))
     # @database_sync_to_async
     # def save_file_message(self, user_id, room_id, file_url, file_name):
     #     user = User.objects.get(id=user_id)

@@ -1,7 +1,7 @@
-{% extends 'base.html' %}
+{% extends 'left_column.html' %}
 {% load static %}
 
-{% block content %}
+{% block nav_content %}
 <style>
     .participant-item:hover {
         background-color: #f8f9fa;
@@ -22,7 +22,7 @@
 
 <div class="container mt-4">
     <div class="row justify-content-center">
-        <div class="col-md-8">
+        <div class="col-md-12">
             <div class="card">
                 <div class="card-header bg-primary text-white">
                     <h2 class="mb-0">Create Group Chat</h2>
@@ -45,7 +45,7 @@
                                     <div class="form-check participant-item">
                                         <input class="form-check-input" type="checkbox" name="participants" value="{{ friend.id }}" id="friend{{ friend.id }}">
                                         <label class="form-check-label d-flex align-items-center" for="friend{{ friend.id }}">
-                                            <img src="{% static 'images/default-avatar.png' %}" alt="{{ friend.username }}" class="rounded-circle mr-2" style="width: 30px; height: 30px;">
+                                            <img src="{% static 'img/default_profile_pic.png' %}" alt="{{ friend.username }}" class="rounded-circle mr-2" style="width: 30px; height: 30px;">
                                             <span>{{ friend.username }}</span>
                                         </label>
                                     </div>

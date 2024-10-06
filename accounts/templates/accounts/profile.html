@@ -1,0 +1,204 @@
+{% extends 'left_column.html' %}
+{% load static %}
+
+{% block nav_content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body p-0">
+                    <!-- Cover Photo -->
+                    <div class="cover-photo" style="height: 200px; background-image: url('{% if user.cover_photo %}{{ user.cover_photo.url }}{% else %}{% static 'img/default_cover.png' %}{% endif %}'); background-size: cover; background-position: center;">
+                    </div>
+                    
+                    <!-- Profile Information -->
+                    <div class="profile-info p-4">
+                        <div class="d-flex align-items-end">
+                            <img src="{% if user.profile_pic %}{{ user.profile_pic.url }}{% else %}{% static 'img/default_profile_pic.png' %}{% endif %}" alt="{{ user.username }}'s profile picture" class="rounded-circle" style="width: 150px; height: 150px; border: 5px solid white; margin-top: -75px;">
+                            <div class="ms-3">
+                                <h2>{{ user.get_full_name }}</h2>
+                                <p class="text-muted">@{{ user.username }}</p>
+                                {% if user.is_online %}
+                                    <span class="badge bg-success">Online</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Last seen: {{ user.last_online }}</span>
+                                {% endif %}
+                            </div>
+                            {% if is_own_profile %}
+                                <button class="btn btn-primary ms-auto" data-bs-toggle="modal" data-bs-target="#editProfileModal">
+                                    <i class="fas fa-edit"></i> Edit Profile
+                                </button>
+                            {% else %}
+                                <div class="ms-auto">
+                                    {% if action == 'chat' %}
+                                        <a href="{% url 'chat:create_or_open_private_chat' user.id %}" class="btn btn-primary">
+                                            <i class="fas fa-comment"></i> Chat
+                                        </a>
+                                    {% elif action == 'request_sent' %}
+                                        <span class="badge bg-info text-white">Friend Request Sent</span>
+                                        <a href="{% url 'friends:cancel_friend_request' request_id=request_id %}" class="btn btn-danger btn-sm">
+                                            <i class="fas fa-times"></i> Cancel Request
+                                        </a>
+                                    
+                                    {% elif action == 'request_received' %}
+                                        <a href="{% url 'friends:accept_friend_request'  request_id=request_id %}" class="btn btn-success btn-sm me-2">
+                                            <i class="fas fa-check"></i> Accept
+                                        </a>
+                                        <a href="{% url 'friends:reject_friend_request' request_id=request_id %}" class="btn btn-danger btn-sm">
+                                            <i class="fas fa-times"></i> Reject
+                                        </a>
+                                    
+                                    {% elif action == 'add_friend' %}
+                                        <a href="{% url 'friends:send_friend_request' user.username %}" class="btn btn-primary btn-sm">
+                                            <i class="fas fa-user-plus"></i> Add Friend
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <p class="mt-3">{{ user.bio|default:"No bio provided." }}</p>
+                    </div>
+
+                    <!-- Tabs -->
+                    <ul class="nav nav-tabs" id="profileTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="posts-tab" data-bs-toggle="tab" data-bs-target="#posts" type="button" role="tab" aria-controls="posts" aria-selected="true">Posts</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="friends-tab" data-bs-toggle="tab" data-bs-target="#friends" type="button" role="tab" aria-controls="friends" aria-selected="false">Friends</button>
+                        </li>
+                    </ul>
+                    <div class="tab-content" id="profileTabsContent">
+                        <!-- Posts Tab -->
+                        <div class="tab-pane fade show active" id="posts" role="tabpanel" aria-labelledby="posts-tab">
+                            <div class="p-4">
+                                <h3>Posts</h3>
+                                <!-- Posts will be implemented here -->
+                                <p>Posts coming soon...</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Friends Tab -->
+                        <div class="tab-pane fade" id="friends" role="tabpanel" aria-labelledby="friends-tab">
+                            <div class="p-4">
+                                <h3>Friends: {{ friends|length }}</h3>
+                                <ul class="list-group list-group-flush">
+                                    {% for friend in friends %}
+                                    <a href="{% url 'accounts:profile' friend.username %}">
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            <div class="d-flex align-items-center">
+                                                <img src="{% if friend.profile_pic %}{{ friend.profile_pic.url }}{% else %}{% static 'img/default_profile_pic.png' %}{% endif %}" 
+                                                     alt="{{ friend.username }}" 
+                                                     class="rounded-circle me-3" 
+                                                     style="width: 50px; height: 50px;">
+                                                <span class="fw-bold">{{ friend.username }}</span>
+                                            </div>
+                                            <div>
+                                                 {% if friend == request.user %}
+                                                    <!-- Don't show any button if the friend is the logged-in user -->
+                                                {% elif is_own_profile %}
+                                                    <a href="{% url 'chat:create_or_open_private_chat' friend.id %}" class="btn btn-primary btn-sm me-2">
+                                                        <i class="fas fa-comment"></i> Chat
+                                                    </a>
+                                                    <a href="{% url 'friends:remove_friend' friend.id %}" class="btn btn-danger btn-sm remove-friend">
+                                                        <i class="fas fa-user-minus"></i> Remove
+                                                    </a>
+                                                {% else %}
+                                                    {% if friend in mutual_friends %}
+                                                    <div class="d-flex align-items-center">
+                                                        <span class="badge bg-success me-2">Mutual Friend</span>
+                                                        <a href="{% url 'chat:create_or_open_private_chat' friend.id %}" class="btn btn-primary btn-sm">
+                                                            <i class="fas fa-comment"></i> Chat
+                                                        </a>
+                                                    </div>
+                        
+                                                    {% elif friend_requests_sent %}
+                                                        
+                                                        <span class="badge bg-info">Friend Request Sent</span>
+                                                       
+                                                    
+                                                    {% elif friend_requests_received %}
+                                                       <span class="badge bg-warning">Friend Request Received</span>
+                                                        
+                                                        
+                                                    
+                                                    {% elif friend not in mutual_friends and friend not in friend_requests_sent and friend not in friend_requests_received %}
+                                                        <a href="{% url 'friends:send_friend_request' friend.username %}" class="btn btn-primary btn-sm">
+                                                            <i class="fas fa-user-plus"></i> Add Friend
+                                                        </a>
+                                                    {% endif %}
+                                                {% endif %} 
+                                            </div>
+                                        </li>
+                                    </a>
+                                    {% empty %}
+                                        <li class="list-group-item text-center text-muted">
+                                            <p class="mb-0">This user has no friends yet.</p>
+                                        </li>
+
+                                    {% endfor %}    
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Profile Modal -->
+{% if is_own_profile %}
+<div class="modal fade" id="editProfileModal" tabindex="-1" aria-labelledby="editProfileModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editProfileModalLabel">Edit Profile</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" action="{% url 'accounts:edit_profile' user.username %}" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="first_name" class="form-label">First Name</label>
+                        <input type="text" class="form-control" id="first_name" name="first_name" value="{{ user.first_name }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="last_name" class="form-label">Last Name</label>
+                        <input type="text" class="form-control" id="last_name" name="last_name" value="{{ user.last_name }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="bio" class="form-label">Bio</label>
+                        <textarea class="form-control" id="bio" name="bio" rows="3">{{ user.bio }}</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="contact" class="form-label">Contact</label>
+                        <input type="text" class="form-control" id="contact" name="contact" value="{{ user.contact }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="profile_pic" class="form-label">Profile Picture</label>
+                        <input type="file" class="form-control" id="profile_pic" name="profile_pic">
+                        {% if user.profile_pic %}
+                            <img src="{{ user.profile_pic.url }}" alt="{{ user.username }}'s profile picture" class="img-thumbnail mt-2" style="width: 100px;">
+                        {% else %}
+                            <img src="{% static 'img/default_profile_pic.png' %}" alt="{{ user.username }}'s profile picture" class="img-thumbnail mt-2" style="width: 100px;">
+                        {% endif %}
+                    </div>
+                    <div class="mb-3">
+                        <label for="cover_photo" class="form-label">Cover Photo</label>
+                        <input type="file" class="form-control" id="cover_photo" name="cover_photo">
+                        {% if user.cover_photo %}
+                            <img src="{{ user.cover_photo.url }}" alt="{{ user.username }}'s cover photo" class="img-thumbnail mt-2" style="width: 100px;">
+                        {% else %}
+                            <img src="{% static 'img/default_cover.png' %}" alt="{{ user.username }}'s cover photo" class="img-thumbnail mt-2" style="width: 100px;">
+                        {% endif %}
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

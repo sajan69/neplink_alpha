@@ -98,7 +98,7 @@
             // Here you would typically make an AJAX call to resend the OTP
             //ajax request to resend OTP
             $.ajax({
-                url: "{% url 'accounts:resend_otp' %}",
+                url: "#",
                 method: 'POST',
                 data: {
                     csrfmiddlewaretoken: '{{ csrf_token }}'

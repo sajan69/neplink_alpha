@@ -13,12 +13,6 @@ class MessageAdmin(admin.ModelAdmin):
     list_filter = ['sender', 'timestamp', 'is_file']
     search_fields = ['sender', 'content']
 
-class CallLogAdmin(admin.ModelAdmin):
-    list_display = ['room', 'caller', 'receiver', 'start_time', 'end_time', 'status']
-    list_filter = ['room', 'caller', 'receiver', 'start_time', 'end_time', 'status']
-    search_fields = ['room', 'caller', 'receiver']
-
-
 admin.site.register(ChatRoom, ChatRoomAdmin)
 admin.site.register(Message, MessageAdmin)
-admin.site.register(CallLog, CallLogAdmin)
+admin.site.register(CallLog)

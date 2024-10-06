@@ -5,6 +5,7 @@
 {% block content %}
 <div class="container-fluid mt-3">
     <div class="row">
+        <!-- Sidebar with Chat Rooms -->
         <div class="col-md-3">
             <div class="card mb-3">
                 <div class="card-header bg-primary text-white">
@@ -13,24 +14,101 @@
                 <div class="card-body p-0">
                     <ul class="list-group list-group-flush">
                         {% for room in rooms %}
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <a href="{% url 'chat:chat_room' room.id %}" class="text-decoration-none text-dark">{{ room.name }}</a>
-                                <button class="btn btn-sm btn-outline-success call-btn" data-room-id="{{ room.id }}">
-                                    <i class="fas fa-phone-alt"></i>
-                                </button>
+                        <a href="{% url 'chat:chat_room' room.id %}" class="text-decoration-none text-dark">
+                            <li class="list-group-item d-flex justify-content-center align-items-center">
+                                    {% if room.is_group_chat %}
+                                        <i class="fas fa-users fa-2x mr-3 text-primary"></i>
+                                        <div class="row">
+                                            <div class="col md-3">
+                                                <span class="font-weight-bold">{{ room.name }}</span>
+                                            </div>
+                                            <div class="col md-9">
+                                                <small class="text-muted d-block">Group Chat</small>
+                                            </div>
+                                        </div>  
+                                       
+                                    {% else %}
+                                        {% for participant in room.participants.all %}
+                                            {% if participant != request.user %}
+                                                <img src="{% if participant.profile_pic %}{{ participant.profile_pic.url }}{% else %}{% static 'img/default_profile_pic.png' %}{% endif %}
+                                                " alt="{{ participant.username }}" class="rounded-circle mr-3" style="width: 50px; height: 50px;">
+                                                <span class="font-weight-bold">{{ participant.username }}</span>
+                                                {% if participant.is_online %}
+                                                <span class="badge bg-success ms-2">Online</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary ms-2">Active: {{ participant.last_online }}</span>
+                                                {% endif %}
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% endif %}
+                                    {% comment %} <div>
+                                        {% if ongoing_call %}
+                                        <button class="btn btn-sm btn-outline-info join-call-btn" data-room-id="{{ room.id }}" data-call-log-id="{{ ongoing_call.id }}" data-call-type="{{ ongoing_call.call_type }}">
+                                            <i class="fas fa-phone-volume"></i> Join Call
+                                            </button>
+                                            {% else %}
+                                            <button class="btn btn-sm btn-outline-success call-btn" data-room-id="{{ room.id }}" data-call-type="audio">
+                                                <i class="fas fa-phone-alt"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-primary call-btn" data-room-id="{{ room.id }}" data-call-type="video">
+                                                    <i class="fas fa-video"></i>
+                                                    </button>
+                                                    {% endif %}
+                                                    </div> {% endcomment %}
                             </li>
+                        </a>
                         {% endfor %}
                     </ul>
                 </div>
             </div>
         </div>
+
+        <!-- Main Chat and Call Interface -->
         <div class="col-md-9">
             <div class="card">
                 <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                    <h3 class="mb-0">{{ room.name|default:"Chat Room" }}</h3>
-                    <button id="join-call" class="btn btn-success">
-                        <i class="fas fa-video me-2"></i>Start Video Call
-                    </button>
+                    {% if room.is_group_chat %}
+                        <div class="d-flex align-items-center">
+                            <h3 class="mb-0 me-3">{{ room.name|default:"Chat Room" }}</h3>
+                            <button type="button" class="btn btn-sm btn-outline-light" data-bs-toggle="modal" data-bs-target="#groupMembersModal">
+                                <i class="fas fa-users me-2"></i>View Members
+                            </button>
+                        </div>
+                    {% else %}
+                        {% for participant in room.participants.all %}
+                            {% if participant != request.user %}
+                                <div class="d-flex align-items-center">
+                                    <img src="{% if participant.profile_pic %}{{ participant.profile_pic.url }}{% else %}{% static 'img/default_profile_pic.png' %}{% endif %}" alt="{{ participant.username }}" class="rounded-circle me-2" style="width: 50px; height: 50px;">
+                                    <span class="font-weight-bold">{{ participant.username }}</span>
+                                    {% if participant.is_online %}
+                                        <span class="badge bg-success ms-2">Online</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary ms-2">Active: {{ participant.last_online }}</span>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                    <div>
+                        {% if ongoing_call %}
+                            <button id="leave-call-btn" class="btn btn-danger me-2">
+                                <i class="fas fa-phone-slash me-2"></i>Leave Call
+                            </button>
+                            <button id="mute-audio-btn" class="btn btn-secondary me-2">
+                                <i class="fas fa-microphone-slash me-2"></i>Mute
+                            </button>
+                            <button id="mute-video-btn" class="btn btn-secondary">
+                                <i class="fas fa-video-slash me-2"></i>Stop Video
+                            </button>
+                        {% else %}
+                            <button class="btn btn-sm btn-outline-warning call-btn" data-room-id="{{ room.id }}" data-call-type="audio">
+                                <i class="fas fa-phone-alt"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-warning call-btn" data-room-id="{{ room.id }}" data-call-type="video">
+                                <i class="fas fa-video"></i>
+                            </button>
+                        {% endif %}
+                    </div>
                 </div>
                 <div class="card-body" style="height: 70vh;">
                     <div id="chat-messages" class="overflow-auto mb-3" style="height: calc(100% - 60px);">
@@ -40,12 +118,16 @@
                                 {% if message.is_file %}
                                     {% if message.file.url|file_seperator == 'image' %}
                                         <a href="{{ message.file.url }}" target="_blank">
-                                            <img src="{{ message.file.url }}" class="img-thumbnail" style="max-width: 200px;">
+                                            <img src="{{ message.file.url }}" class="img-thumbnail" style="max-width: 200px;" alt="Shared image">
                                         </a>
                                     {% elif message.file.url|file_seperator == 'video' %}
-                                        <video src="{{ message.file.url }}" controls class="w-100"></video>
+                                        <video src="{{ message.file.url }}" controls class="w-100">
+                                            Your browser does not support the video tag.
+                                        </video>
                                     {% elif message.file.url|file_seperator == 'audio' %}
-                                        <audio src="{{ message.file.url }}" controls></audio>
+                                        <audio src="{{ message.file.url }}" controls>
+                                            Your browser does not support the audio tag.
+                                        </audio>
                                     {% else %}
                                         <a href="{{ message.file.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
                                             <i class="fas fa-file"></i> {{ message.file.name }}
@@ -65,7 +147,7 @@
                             <label for="file-input" class="btn btn-outline-secondary mb-0">
                                 <i class="fas fa-paperclip"></i>
                             </label>
-                            <input type="file" id="file-input" style="display: none;">
+                            <input type="file" id="file-input" style="display: none;" aria-label="File attachment">
                             <button type="submit" class="btn btn-primary">
                                 <i class="fas fa-paper-plane me-2"></i>Send
                             </button>
@@ -74,43 +156,114 @@
                 </div>
             </div>
         </div>
-    </div>
-</div>
 
-<div class="modal fade" id="videoCallModal" tabindex="-1" aria-labelledby="videoCallModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="videoCallModalLabel">Video Call</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div id="video-container" class="row">
-                    <div class="col-md-6">
-                        <div id="local-video" class="w-100 h-100 bg-dark"></div>
+        <!-- Group Members Modal -->
+        {% if room.is_group_chat %}
+        <div class="modal fade" id="groupMembersModal" tabindex="-1" aria-labelledby="groupMembersModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="groupMembersModalLabel">Group Members: {{room.participants.all|length}}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <div class="col-md-6">
-                        <div id="remote-video" class="w-100 h-100 bg-dark"></div>
+                    <div class="modal-body">
+                        <ul class="list-group">
+                            {% for participant in room.participants.all %}
+                            <a href="#" class="text-decoration-none">
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div class="d-flex align-items-center">
+                                        <img src="{% if participant.profile_pic %}{{ participant.profile_pic.url }}{% else %}{% static 'img/default_profile_pic.png' %}{% endif %}" alt="{{ participant.username }}" class="rounded-circle me-2" style="width: 40px; height: 40px;">
+                                        <span>{{ participant.username }}</span>
+                                    </div>
+                                    {% if participant.is_online %}
+                                        <span class="badge bg-success">Online</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Offline</span>
+                                    {% endif %}
+                                </li>
+                            </a>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button id="leave-call" class="btn btn-danger">
-                    <i class="fas fa-phone-slash me-2"></i>End Call
-                </button>
-            </div>
         </div>
+        {% endif %}
     </div>
 </div>
 
-<script src="https://download.agora.io/sdk/release/AgoraRTC_N.js"></script>
+<!-- Call Interface Modal -->
+<div class="modal fade" id="callModal" tabindex="-1" aria-labelledby="callModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">{{ room.name|default:"Chat Room" }} - Call</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" onclick="leaveAgoraCall()"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row">
+          <!-- Local Video -->
+          <div class="col-md-6">
+            <div id="local-video-container" class="mb-3">
+              <p>Local Video</p>
+              <div id="local-video"></div>
+            </div>
+          </div>
+          <!-- Remote Videos -->
+          <div class="col-md-6">
+            <div id="remote-video-container">
+              <p>Remote Participants</p>
+            </div>
+          </div>
+        </div>
+        <!-- Call Controls -->
+        <div class="d-flex justify-content-center mt-3">
+          <button id="mute-audio-btn" class="btn btn-secondary me-2">
+              <i class="fas fa-microphone-slash me-2"></i>Mute
+          </button>
+          <button id="mute-video-btn" class="btn btn-secondary me-2">
+              <i class="fas fa-video-slash me-2"></i>Stop Video
+          </button>
+          <button id="leave-call-btn" class="btn btn-danger">
+              <i class="fas fa-phone-slash me-2"></i>Leave Call
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Agora SDK Script -->
+<script src="https://cdn.agora.io/sdk/release/AgoraRTC_N.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
 <script>
+   
     const roomId = {{ room.id }};
     const userId = {{ request.user.id }};
+    const username = "{{ request.user.username }}";
     let currentCallLogId = null;
+    let currentCallType = null;
 
+    let client = null;
+    let localTracks = {
+        videoTrack: null,
+        audioTrack: null
+    };
+    let remoteUsers = {};
+
+    // Initialize Bootstrap Modal
+    const callModal = new bootstrap.Modal(document.getElementById('callModal'), {
+        backdrop: 'static',
+        keyboard: false
+    });
+
+    // WebSocket for Chat (existing code)
     const chatSocket = new WebSocket(
-        'ws://' + window.location.host +
+        (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host +
         '/ws/chat/' + roomId + '/'
     );
 
@@ -123,27 +276,24 @@
         console.log(data);
         const chatMessages = document.querySelector('#chat-messages');
         let messageHTML = `
-            <div class="mb-3 p-2 ${data.username === '{{ request.user.username }}' ? 'bg-light text-end' : ''}">
+            <div class="mb-3 p-2 ${data.username === username ? 'bg-light text-end' : ''}">
                 <strong>${data.username}:</strong> 
         `;
         
         if (data.is_file) {
-            
-              // Extract file extension from the URL
-        const fileUrl = data.file_url;
-        const fileExtension = fileUrl.split('.').pop().toLowerCase(); // Get the file extension
+            const fileUrl = data.file_url;
+            const fileExtension = fileUrl.split('.').pop().toLowerCase();
 
-        // Determine file type based on the extension
-        let fileType = '';
-        if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg'].includes(fileExtension)) {
-            fileType = 'image';
-        } else if (['mp4', 'mkv', 'webm', 'ogg'].includes(fileExtension)) {
-            fileType = 'video';
-        } else if (['mp3', 'wav', 'ogg'].includes(fileExtension)) {
-            fileType = 'audio';
-        } else {
-            fileType = 'other';
-        }
+            let fileType = '';
+            if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg'].includes(fileExtension)) {
+                fileType = 'image';
+            } else if (['mp4', 'mkv', 'webm', 'ogg'].includes(fileExtension)) {
+                fileType = 'video';
+            } else if (['mp3', 'wav', 'ogg'].includes(fileExtension)) {
+                fileType = 'audio';
+            } else {
+                fileType = 'other';
+            }
 
             if (fileType === 'image') {
                 messageHTML += `
@@ -187,6 +337,7 @@
         console.log('WebSocket connection closed');
     };
 
+    // Chat Form Submission
     document.querySelector('#chat-form').onsubmit = function(e) {
         e.preventDefault();
         const messageInputDom = document.querySelector('#chat-message-input');
@@ -199,6 +350,7 @@
         messageInputDom.value = '';
     };
     
+    // File Input Handling
     document.querySelector('#file-input').onchange = function(e) {
         const file = e.target.files[0];
         const formData = new FormData();
@@ -231,92 +383,219 @@
         e.target.value = '';
     };
 
-    let rtc = {
-        client: null,
-        localAudioTrack: null,
-        localVideoTrack: null
-    };
+    // Call Buttons Event Listeners
+    document.querySelectorAll('.call-btn').forEach(button => {
+        button.addEventListener('click', () => {
+            const roomId = button.getAttribute('data-room-id');
+            const callType = button.getAttribute('data-call-type');
+            initiateAgoraCall(roomId, callType);
+        });
+    });
 
-    let options = {
-        appId: null,
-        channel: null,
-        token: null,
-        uid: userId
-    };
+    document.querySelectorAll('.join-call-btn').forEach(button => {
+        button.addEventListener('click', () => {
+            const roomId = button.getAttribute('data-room-id');
+            const callLogId = button.getAttribute('data-call-log-id');
+            const callType = button.getAttribute('data-call-type');
+            joinAgoraCall(roomId, callLogId, callType);
+        });
+    });
 
-    async function joinCall() {
-        try {
-            const response = await fetch(`/chat/generate_agora_token/${roomId}/`);
-            const data = await response.json();
-            
-            options.appId = data.app_id;
-            options.channel = data.channel_name;
-            options.token = data.token;
-            currentCallLogId = data.call_log_id;
-
-            rtc.client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
-            
-            await rtc.client.join(options.appId, options.channel, options.token, options.uid);
-            
-            rtc.localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
-            rtc.localVideoTrack = await AgoraRTC.createCameraVideoTrack();
-            
-            await rtc.client.publish([rtc.localAudioTrack, rtc.localVideoTrack]);
-            
-            const localVideoContainer = document.getElementById("local-video");
-            rtc.localVideoTrack.play(localVideoContainer);
-            
-            $('#videoCallModal').modal('show');
-            
-            rtc.client.on("user-published", async (user, mediaType) => {
-                await rtc.client.subscribe(user, mediaType);
-                if (mediaType === "video") {
-                    const remoteVideoContainer = document.getElementById("remote-video");
-                    user.videoTrack.play(remoteVideoContainer);
-                }
-                if (mediaType === "audio") {
-                    user.audioTrack.play();
-                }
-            });
-
-        } catch (error) {
-            console.error("Error joining call:", error);
-        }
-    }
-
-    async function leaveCall() {
-        rtc.localAudioTrack.close();
-        rtc.localVideoTrack.close();
-        await rtc.client.leave();
-        $('#videoCallModal').modal('hide');
-
-        if (currentCallLogId) {
-            try {
-                const response = await fetch(`/chat/end_call/${currentCallLogId}/`, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                    }
-                });
-                const data = await response.json();
-                if (data.status === 'success') {
-                    console.log('Call ended successfully');
-                } else {
-                    console.error('Error ending call:', data.error);
-                }
-            } catch (error) {
-                console.error('Error ending call:', error);
+    // Initiate Call Function
+    function initiateAgoraCall(roomId, callType) {
+        fetch('/chat/initiate_call/', {
+            method: 'POST',
+            body: JSON.stringify({
+                room_id: roomId,
+                call_type: callType
+            }),
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json'
             }
-            currentCallLogId = null;
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'Call initiated') {
+                currentCallLogId = data.call_log_id;
+                currentCallType = data.call_type;
+                joinAgoraCall(roomId, currentCallLogId, currentCallType);
+            } else if (data.status === 'Call already ongoing') {
+                alert('A call is already ongoing in this room.');
+            }
+        })
+        .catch(error => {
+            console.error('Error initiating call:', error);
+        });
+    }
+
+    // Join Call Function
+    function joinAgoraCall(roomId, callLogId, callType) {
+        currentCallLogId = callLogId;
+        currentCallType = callType;
+        console.log('Joining call:', roomId, callLogId, callType);
+
+        // Fetch Agora credentials
+        fetch(`/chat/get_agora_token/?channel=room_${roomId}&uid=${userId}`)
+            .then(response => response.json())
+            .then(data => {
+                const appId = data.app_id;
+                const token = data.token;
+                const channel = `room_${roomId}`;
+
+                initializeAgora(appId, token, channel, userId, callType);
+            })
+            .catch(error => {
+                console.error('Error fetching Agora token:', error);
+            });
+    }
+
+    // Initialize Agora
+    async function initializeAgora(appId, token, channel, uid, callType) {
+        client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+
+        client.on("user-published", handleUserPublished);
+        client.on("user-unpublished", handleUserUnpublished);
+
+        try {
+            await client.join(appId, channel, token, uid);
+            console.log("Joined Agora channel:", channel);
+
+            if (callType === 'video') {
+                localTracks.videoTrack = await AgoraRTC.createCameraVideoTrack();
+                localTracks.audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+                localTracks.videoTrack.play("local-video");
+            } else {
+                localTracks.audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+            }
+
+            await client.publish(Object.values(localTracks));
+            console.log("Published local tracks");
+
+            // Show the call modal
+            callModal.show();
+        } catch (error) {
+            console.error("Agora initialization error:", error);
         }
     }
 
-    document.getElementById('join-call').addEventListener('click', joinCall);
-    document.getElementById('leave-call').addEventListener('click', leaveCall);
+    // Handle Remote Users Publishing
+    async function handleUserPublished(user, mediaType) {
+        const id = user.uid;
+        await client.subscribe(user, mediaType);
+        console.log("Subscribed to remote user:", id);
 
-    // Ensure the modal is hidden when closed
-    $('#videoCallModal').on('hidden.bs.modal', function (e) {
-        leaveCall();
+        if (mediaType === 'video') {
+            const remoteVideoContainer = document.createElement('div');
+            remoteVideoContainer.id = `remote-video-${id}`;
+            remoteVideoContainer.style.width = "100%";
+            remoteVideoContainer.style.height = "300px";
+            document.getElementById('remote-video-container').append(remoteVideoContainer);
+            user.videoTrack.play(`remote-video-${id}`);
+        }
+
+        if (mediaType === 'audio') {
+            user.audioTrack.play();
+        }
+    }
+
+    // Handle Remote Users Unpublishing
+    async function handleUserUnpublished(user) {
+        const id = user.uid;
+        if (user.videoTrack) {
+            const remoteVideoElement = document.getElementById(`remote-video-${id}`);
+            if (remoteVideoElement) {
+                user.videoTrack.stop();
+                remoteVideoElement.remove();
+            }
+        }
+
+        if (user.audioTrack) {
+            user.audioTrack.stop();
+        }
+    }
+
+    // Leave Call Function
+    async function leaveAgoraCall() {
+        if (client) {
+            await client.leave();
+            console.log("Left the Agora channel");
+        }
+
+        // Close local tracks
+        for (let trackName in localTracks) {
+            let track = localTracks[trackName];
+            if (track) {
+                track.stop();
+                track.close();
+                localTracks[trackName] = null;
+            }
+        }
+
+        // Hide the call modal
+        callModal.hide();
+
+        // End the call in the backend
+        if (currentCallLogId) {
+            fetch('/chat/end_call/', {
+                method: 'POST',
+                body: JSON.stringify({
+                    call_log_id: currentCallLogId
+                }),
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'Call ended') {
+                    console.log('Call ended successfully');
+                }
+            })
+            .catch(error => {
+                console.error('Error ending call:', error);
+            });
+        }
+
+        currentCallLogId = null;
+        currentCallType = null;
+    }
+
+    // Call Control Buttons
+    document.getElementById('leave-call-btn').addEventListener('click', leaveAgoraCall);
+
+    document.getElementById('mute-audio-btn').addEventListener('click', () => {
+        if (localTracks.audioTrack) {
+            if (localTracks.audioTrack.muted) {
+                localTracks.audioTrack.setMuted(false);
+                document.getElementById('mute-audio-btn').innerHTML = '<i class="fas fa-microphone me-2"></i>Mute';
+            } else {
+                localTracks.audioTrack.setMuted(true);
+                document.getElementById('mute-audio-btn').innerHTML = '<i class="fas fa-microphone-slash me-2"></i>Unmute';
+            }
+        }
+    });
+
+    document.getElementById('mute-video-btn').addEventListener('click', () => {
+        if (localTracks.videoTrack) {
+            if (localTracks.videoTrack.muted) {
+                localTracks.videoTrack.setMuted(false);
+                document.getElementById('mute-video-btn').innerHTML = '<i class="fas fa-video me-2"></i>Stop Video';
+            } else {
+                localTracks.videoTrack.setMuted(true);
+                document.getElementById('mute-video-btn').innerHTML = '<i class="fas fa-video-slash me-2"></i>Start Video';
+            }
+        }
+    });
+     // Initialize Bootstrap modals
+     var myModal = new bootstrap.Modal(document.getElementById('groupMembersModal'), {
+        keyboard: false
+    })
+
+    // Add event listener for the "View Members" button
+    document.querySelector('[data-bs-target="#groupMembersModal"]').addEventListener('click', function() {
+        myModal.show();
     });
 </script>
 {% endblock %}

@@ -1,4 +1,4 @@
-from datetime import timezone
+from datetime import datetime, timezone
 from django.db import models
 from django.conf import settings
 
@@ -53,12 +53,13 @@ class Message(models.Model):
 class CallLog(models.Model):
     room = models.ForeignKey(ChatRoom, on_delete=models.CASCADE, related_name='call_logs')
     caller = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='caller_logs')
-    receiver = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='receiver_logs', null=True, blank=True)
+    participants = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='call_participations')
     start_time = models.DateTimeField(auto_now_add=True)
     end_time = models.DateTimeField(null=True, blank=True)
     total_time = models.DurationField(null=True, blank=True)
     status = models.CharField(max_length=10, choices=[('ongoing', 'Ongoing'), ('ended', 'Ended')], default='ongoing')
     agora_channel = models.CharField(max_length=255, null=True, blank=True)
+    call_type = models.CharField(max_length=10, choices=[('audio', 'Audio'), ('video', 'Video')], default='video')
 
     def __str__(self):
         return f'Call in {self.room.name} - {self.status}'
@@ -66,11 +67,13 @@ class CallLog(models.Model):
     def save(self, *args, **kwargs):
         if self.end_time and self.start_time:
             self.total_time = self.end_time - self.start_time
+        else:
+                self.total_time = None
         super().save(*args, **kwargs)
 
     def end_call(self):
         self.status = 'ended'
-        self.end_time = timezone.now()
+        self.end_time = (datetime.now(timezone.utc))
         self.save()
         self.room.active_call = None
         self.room.save()
