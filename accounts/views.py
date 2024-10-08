@@ -1,3 +1,4 @@
+from django.http import JsonResponse
 from django.views.generic import View, TemplateView
 from django.urls import reverse_lazy
 from django.contrib.auth import login, authenticate, logout
@@ -5,10 +6,12 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.core.mail import send_mail
+from requests import request
 
+from accounts.services import NotificationService
 from chat.models import ChatRoom
 from friends.models import FriendRequest, Friendship
-from .models import User
+from .models import Notification, User
 from django.contrib import messages
 
 class UserRegisterView(View):
@@ -127,10 +130,12 @@ class HomeView(TemplateView):
         context = super().get_context_data(**kwargs)
          # Get all users except the current user and their friends and friend requests received and sent
         context['unknown_users'] = User.objects.exclude(id=self.request.user.id).exclude(friends__user=self.request.user).exclude(friend_requests_received__from_user=self.request.user).exclude(friend_requests_sent__to_user=self.request.user)
-
+        # Get all unknown users who have friends that are friends with the current user
+        context['suggested_users'] = User.objects.filter(friends__user__friends__user=self.request.user).exclude(id=self.request.user.id).exclude(friends__user=self.request.user).exclude(friend_requests_received__from_user=self.request.user).exclude(friend_requests_sent__to_user=self.request.user).distinct()
+        
         # Get all friend requests received by the current user
         context['friend_requests'] = FriendRequest.objects.filter(to_user=self.request.user)
-        print(context['friend_requests'])
+        
 
         return context
 
@@ -156,6 +161,7 @@ from django.utils.decorators import method_decorator
 from django.db.models import Q, Prefetch
 
 from django.db.models import Q
+from push_notifications.models import GCMDevice
 
 @method_decorator(login_required, name='dispatch')
 class ProfileView(DetailView):
@@ -184,6 +190,8 @@ class ProfileView(DetailView):
 
         # Calculate mutual friends
         mutual_friends = viewed_user_friends_set.intersection(current_user_friends_set)
+
+
 
         # Fetch friend requests
         friend_requests_sent = FriendRequest.objects.filter(from_user=current_user)
@@ -221,6 +229,7 @@ class ProfileView(DetailView):
 
         # Add mutual friends to the context
         context['mutual_friends'] = mutual_friends
+        print(f'Friend requests sent: {context["friend_requests_sent"]}, received: {context["friend_requests_received"]}, mutual friends: {context["mutual_friends"]}') 
 
         return context
 
@@ -245,3 +254,100 @@ class ProfileEditView(UpdateView):
 
     def get_success_url(self):
         return reverse_lazy('accounts:profile', kwargs={'username': self.request.user.username})
+    
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
+class RegisterDeviceView(APIView):
+    def post(self, request, *args, **kwargs):
+        registration_id = request.data.get("registration_id")
+        user_id = request.data.get("user_id")
+
+        if not registration_id:
+            return Response({"error": "Missing registration_id"}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = None
+        if user_id:
+            try:
+                user = User.objects.get(id=user_id)
+            except User.DoesNotExist:
+                return Response({"error": "Invalid user_id"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check if the device with the registration_id exists
+        device = GCMDevice.objects.filter(registration_id=registration_id).first()
+
+        if device:
+            # If device exists and user is provided, assign the device to the user
+            if user:
+                device.user = user
+            device.active = True
+            device.save()
+            created = False
+        else:
+            # If device does not exist, create a new device
+            device = GCMDevice.objects.create(registration_id=registration_id, user=user, active=True)
+            created = True
+
+        return Response({"success": True, "created": created}, status=status.HTTP_201_CREATED)
+
+    
+
+class LogoutDeviceView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        registration_id = request.data.get("registration_id")
+
+        if not registration_id:
+            return Response({"error": "Missing registration_id"}, status=status.HTTP_400_BAD_REQUEST)
+
+        device = GCMDevice.objects.filter(registration_id=registration_id, user=request.user).first()
+        if device:
+            device.active = False
+            device.save()
+            return Response({"success": True}, status=status.HTTP_200_OK)
+        return Response({"error": "Device not found"}, status=status.HTTP_404_NOT_FOUND)
+    
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.shortcuts import render
+
+def notifications_view(request):
+    user = request.user
+    notifications = NotificationService.get_user_notifications(user.id)
+    unread_count = NotificationService.get_unread_notification_count(user.id)
+    
+
+    context = {
+        'notifications': notifications,
+        'unread_count': unread_count
+    }
+    return render(request, 'accounts/notifications.html', context)
+
+
+from django.views.decorators.http import require_POST  
+@require_POST
+def mark_notification_read(request, notification_id):
+    user_id = request.user.id  # Assuming the user is authenticated
+    NotificationService.mark_notification_as_read(user_id, notification_id)
+    return JsonResponse({'success': True})
+
+@require_POST
+def mark_all_notifications_read(request):
+    user_id = request.user.id  # Assuming the user is authenticated
+    NotificationService.mark_all_notifications_as_read(user_id)
+    return JsonResponse({'success': True})
+
+def global_view(request):
+    if request.user.is_authenticated:
+        unread_count = NotificationService.get_unread_notification_count(request.user.id)
+        friend_requests_count = FriendRequest.objects.filter(to_user=request.user).count()
+        messages_count = ChatRoom.objects.filter(participants=request.user).count()
+    
+    else:
+        unread_count = 0
+        friend_requests_count = 0
+        messages_count = 0
+   
+    print(f'Unread count: {unread_count}, friend requests count: {friend_requests_count}, messages count: {messages_count}')
+    return render({'unread_count': unread_count, 'friend_requests_count': friend_requests_count, 'messages_count': messages_count})

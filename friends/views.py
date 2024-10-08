@@ -3,6 +3,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Q
+
+from accounts.services import NotificationService
 from .models import FriendRequest, Friendship
 from accounts.models import User
 
@@ -77,6 +79,7 @@ def send_friend_request(request, username):
     friend_request, created = FriendRequest.objects.get_or_create(from_user=request.user, to_user=to_user)
     if created:
         messages.success(request, f'Friend request sent to {to_user.username}.')
+        NotificationService.send_notification_to_userids('Friend Request', f'{request.user.username} sent you a friend request.', [to_user.id], '/friends/requests/')
     else:
         messages.info(request, f'Friend request to {to_user.username} already sent.')
     return redirect('friends:user_search')

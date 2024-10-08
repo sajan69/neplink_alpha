@@ -44,7 +44,9 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
+
     'channels',
+    'push_notifications',
     'accounts',
     'chat',
     'friends',
@@ -66,6 +68,14 @@ MIDDLEWARE = [
 AGORA_APP_ID = config('AGORA_APP_ID')
 AGORA_APP_CERTIFICATE = config('AGORA_APP_CERTIFICATE')
 
+import firebase_admin
+from firebase_admin import credentials
+
+
+cred_path = os.path.join(BASE_DIR, 'firebase_credentials.json')
+cred = credentials.Certificate(cred_path)
+firebase_admin.initialize_app(cred)
+
 ROOT_URLCONF = 'neplink.urls'
 
 AUTH_USER_MODEL = 'accounts.User'
@@ -81,9 +91,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-               
-
-                
+                'accounts.context_processors.global_context', 
             ],
         },
     },

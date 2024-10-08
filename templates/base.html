@@ -12,6 +12,127 @@
     <link href="
     https://cdn.jsdelivr.net/npm/sweetalert2@11.14.1/dist/sweetalert2.min.css
     " rel="stylesheet">
+
+    {% if user.is_authenticated %}
+<div id="notification-component" data-user-id="{{ request.user.id }}"></div>
+{% else %}
+<div id="notification-component" data-user-id="0"></div>
+{% endif %}
+
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-messaging.js"></script>
+    <script type="text/javascript">
+        var firebaseConfig = {
+            apiKey: "AIzaSyBSQZPpLOHznojHh9R_OaeHBjvr92CzLkg",
+            authDomain: "neplink.firebaseapp.com",
+            databaseURL: "https://neplink-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "neplink",
+            storageBucket: "neplink.appspot.com",
+            messagingSenderId: "424450153128",
+            appId: "1:424450153128:web:14068d82d2c5791891809d",
+            measurementId: "G-FW9V6B9SND"
+        };
+        firebase.initializeApp(firebaseConfig);
+    
+        const messaging = firebase.messaging();
+    
+       
+    
+        messaging.onMessage((payload) => {
+            console.log('Message received. ', payload);
+            const notificationOptions = {
+                body: payload.notification.body,
+                icon: '/firebase-logo.png'
+            };
+    
+            if (Notification.permission === 'granted') {
+                const notification = new Notification(payload.notification.title, notificationOptions);
+                notification.onclick = () => {
+                    console.log('Notification clicked');
+                };
+            }
+    
+            document.getElementById('notification').innerText = payload.notification.body;
+        });
+    
+        function registerDevice() {
+          console.log('Register Device function called.');
+          
+      
+          // Request permission for notifications
+          messaging.requestPermission()
+            .then(() => {
+                console.log('Notification permission granted.');
+                return messaging.getToken();
+            })
+            .then(token => {
+                console.log('Notification permission granted. Token:', token);
+                if (token) {
+                    // Set the device token as a cookie
+                    document.cookie = `X-Device-ID=${token};path=/`;
+                    console.log('Device token set as cookie:', document.cookie);
+      
+                    // Get the user ID from the notification component
+                    const notificationComponent = document.getElementById('notification-component');
+                    console.log('Notification component:', notificationComponent);
+                    const userId = notificationComponent ? notificationComponent.dataset.userId : null;
+                    console.log('User ID:', userId);
+      
+                    // Get the CSRF token from the cookie
+                    const getCookie = (name) => {
+                      let cookieValue = null;
+                      if (document.cookie && document.cookie !== '') {
+                        const cookies = document.cookie.split(';');
+                        for (let i = 0; i < cookies.length; i++) {
+                          const cookie = cookies[i].trim();
+                          if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                          }
+                        }
+                      }
+                      return cookieValue;
+                    };
+                    const csrftoken = getCookie('csrftoken');
+    
+                    // Send token to server for registration
+                    fetch('/register-device/', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken,  
+                      },
+                      body: JSON.stringify({ registration_id: token, user_id: userId !== "0" ? userId : null }),
+                    })
+                    .then(response => {
+                        console.log('Server response:', response);
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('Registration response data:', data);
+                    })
+                    .catch(error => {
+                       console.error('Error during registration:', error);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Unable to get permission to notify.', error);
+            });
+      }
+      
+    
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/firebase-messaging-sw.js')
+            .then((registration) => {
+                console.log('Service Worker registered with scope:', registration.scope);
+                registerDevice();
+            }).catch((error) => {
+                console.error('Service Worker registration failed:', error);
+            });
+        }
+    </script>
+    
 </head>
 <body style="background-color: #EEFAFF;">
     {% comment %} <nav class="navbar navbar-expand-lg navbar-light bg-light">
@@ -66,3 +187,4 @@
     
 </body>
 </html>
+

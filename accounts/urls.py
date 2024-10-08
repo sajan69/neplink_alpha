@@ -1,5 +1,22 @@
 from django.urls import path
-from accounts.views import ProfileEditView, ProfileView, UserRegisterView, UserLoginView, PasswordResetView, OTPVerificationView, UserPasswordChangeView,HomeView,logout_view,PasswordResetConfirmView,LandingPageView
+from accounts.views import (
+    ProfileEditView,
+    ProfileView,
+    UserRegisterView,
+    UserLoginView,
+    PasswordResetView,
+    OTPVerificationView,
+    UserPasswordChangeView,
+    HomeView,
+    logout_view,
+    PasswordResetConfirmView,
+    LandingPageView,
+    RegisterDeviceView,
+    LogoutDeviceView,
+    notifications_view,
+    mark_all_notifications_read,
+    mark_notification_read
+)
 
 app_name = 'accounts'
 urlpatterns = [
@@ -14,4 +31,10 @@ urlpatterns = [
      path('profile/<str:username>/', ProfileView.as_view(), name='profile'),
     path('profile/<str:username>/edit/', ProfileEditView.as_view(), name='edit_profile'),
     path('landing-page/', LandingPageView.as_view(), name='landing_page'),
+    path('register-device/', RegisterDeviceView.as_view(), name='register_device'),
+    path('logout-device/', LogoutDeviceView.as_view(), name='logout_device'),
+    path('notifications/', notifications_view, name='notifications'),
+    path('notifications/mark-all-read/', mark_all_notifications_read, name='mark_all_read'),
+    path('notifications/mark-read/<int:notification_id>/', mark_notification_read, name='mark_read'),
 ]
+

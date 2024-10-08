@@ -104,6 +104,7 @@
                                                         <i class="fas fa-user-minus"></i> Remove
                                                     </a>
                                                 {% else %}
+                                                
                                                     {% if friend in mutual_friends %}
                                                     <div class="d-flex align-items-center">
                                                         <span class="badge bg-success me-2">Mutual Friend</span>
@@ -111,18 +112,19 @@
                                                             <i class="fas fa-comment"></i> Chat
                                                         </a>
                                                     </div>
-                        
+                                                    
                                                     {% elif friend_requests_sent %}
                                                         
                                                         <span class="badge bg-info">Friend Request Sent</span>
                                                        
                                                     
-                                                    {% elif friend_requests_received %}
+                                                    {% elif friend in friend_requests_received %}
                                                        <span class="badge bg-warning">Friend Request Received</span>
                                                         
                                                         
                                                     
                                                     {% elif friend not in mutual_friends and friend not in friend_requests_sent and friend not in friend_requests_received %}
+                                                    
                                                         <a href="{% url 'friends:send_friend_request' friend.username %}" class="btn btn-primary btn-sm">
                                                             <i class="fas fa-user-plus"></i> Add Friend
                                                         </a>

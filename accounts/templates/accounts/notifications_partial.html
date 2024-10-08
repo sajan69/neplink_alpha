@@ -1,0 +1,21 @@
+{% if notifications.has_other_pages %}
+    <nav aria-label="Notification pagination" class="mt-4">
+        <ul class="pagination justify-content-center" id="paginationControls">
+            <li class="page-item {% if not notifications.has_previous %}disabled{% endif %}">
+                <a class="page-link" href="#" data-page="{{ notifications.previous_page_number }}" aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            </li>
+            {% for i in notifications.paginator.page_range %}
+            <li class="page-item {% if notifications.number == i %}active{% endif %}">
+                <a class="page-link" href="#" data-page="{{ i }}">{{ i }}</a>
+            </li>
+            {% endfor %}
+            <li class="page-item {% if not notifications.has_next %}disabled{% endif %}">
+                <a class="page-link" href="#" data-page="{{ notifications.next_page_number }}" aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    {% endif %}

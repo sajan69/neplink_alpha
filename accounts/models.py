@@ -49,4 +49,21 @@ def set_last_logged_in(sender, user, **kwargs):
     """Set the last_logged_in timestamp when the user logs in."""
     user.last_logged_in = timezone.now()
     user.save(update_fields=['last_logged_in'])  # Save only the last_logged_in field
+
+
+class Notification(models.Model):
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications', null=True, blank=True)  # String-based reference to avoid circular import
+    title = models.CharField(max_length=255)
+    body = models.TextField()
+    data = models.JSONField(default=dict, blank=True)
+    link = models.URLField(max_length=500, blank=True, null=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    read = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['-timestamp']
+
+    def __str__(self):
+        return f"{self.title} - { self.user.username if self.user else self.user_type }"
  
