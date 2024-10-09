@@ -27,6 +27,12 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+
+    # Decode the FIREBASE_CREDENTIALS secret and recreate the JSON file
+    - name: Create firebase_credentials.json
+      run: |
+        echo ${{ secrets.FIREBASE_CREDENTIALS }} | base64 --decode > ./firebase_credentials.json
+
     - name: Run Tests
       env:
         SECRET_KEY: ${{ secrets.SECRET_KEY }}

@@ -18,7 +18,7 @@ db.sqlite3
 # Byte-compiled / optimized / DLL files
 *.py[cod]
 *$py.class
-
+firebase_credentials_base64.txt
 # C extensions
 *.so
 

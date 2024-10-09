@@ -66,7 +66,7 @@ class PostManagementView(LoginRequiredMixin, View):
                     f"{request.user.username} liked your post",
                     f"{request.user.username} liked your post: {post.caption[:50]}...",
                     [post.user.id],
-                    reverse('accounts:post_detail', args=[post.id])
+                    reverse('post:post_detail', args=[post.id])
                 )
         return redirect('accounts:home')
 
@@ -84,7 +84,7 @@ class PostManagementView(LoginRequiredMixin, View):
                     f"{request.user.username} liked your comment",
                     f"{request.user.username} liked your comment: {comment.text[:50]}...",
                     [comment.user.id],
-                    reverse('accounts:post_detail', args=[post.id])
+                    reverse('post:post_detail', args=[post.id])
                 )
         return redirect('accounts:home')
 
@@ -98,7 +98,7 @@ class PostManagementView(LoginRequiredMixin, View):
                     f"{request.user.username} commented on your post",
                     f"{request.user.username} commented: {text[:50]}...",
                     [post.user.id],
-                    reverse('accounts:post_detail', args=[post.id])
+                    reverse('post:post_detail', args=[post.id])
                 )
         else:
             messages.error(request, 'Comment text is required')
@@ -163,7 +163,7 @@ class PostManagementView(LoginRequiredMixin, View):
                     f"{request.user.username} liked your reply",
                     f"{request.user.username} liked your reply: {reply.text[:50]}...",
                     [reply.user.id],
-                    reverse('accounts:post_detail', args=[post.id])
+                    reverse('post:post_detail', args=[post.id])
                 )
         return redirect('accounts:home')
 
@@ -179,7 +179,7 @@ class PostManagementView(LoginRequiredMixin, View):
                     f"{request.user.username} replied to your comment",
                     f"{request.user.username} replied: {text[:50]}...",
                     [comment.user.id],
-                    reverse('accounts:post_detail', args=[post.id])
+                    reverse('post:post_detail', args=[post.id])
                 )
         else:
             messages.error(request, 'Reply text is required')
