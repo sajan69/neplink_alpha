@@ -70,7 +70,7 @@
                                 {% endif %}
                                 {{ user.username }}
                             </div>
-                            <a href="{% url 'friends:send_friend_request' user.id %}" class="btn btn-primary btn-sm">Add Friend</a>
+                            <a href="{% url 'friends:send_friend_request' user.username %}" class="btn btn-primary btn-sm">Add Friend</a>
                         </div>
                     </li>
                     {% endfor %}

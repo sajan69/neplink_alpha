@@ -193,16 +193,19 @@ from django.db.models import Q, Prefetch
 from django.db.models import Q
 from push_notifications.models import GCMDevice
 
-class ProfileView(LoginRequiredMixin, View):
-    
+class ProfileView(LoginRequiredMixin, DetailView):
+    model = User
     template_name = 'accounts/profile.html'
+    context_object_name = 'user'
     
 
-    
-    def get(self, request, username):
-        viewed_user = get_object_or_404(User, username=username)
-        current_user = request.user
-        context = {}
+    def get_object(self):
+        return get_object_or_404(User, username=self.kwargs['username'])
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        viewed_user = self.get_object()
+        current_user = self.request.user
 
         # Check if the profile being viewed belongs to the current user
         context['is_own_profile'] = (current_user == viewed_user)
@@ -262,7 +265,7 @@ class ProfileView(LoginRequiredMixin, View):
         # Add mutual friends to the context
         context['mutual_friends'] = mutual_friends
 
-        return render(request, self.template_name, context)
+        return context
 
 
 
