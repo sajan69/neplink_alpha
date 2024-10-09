@@ -31,7 +31,7 @@ jobs:
     # Decode the FIREBASE_CREDENTIALS secret and recreate the JSON file
     - name: Create firebase_credentials.json
       run: |
-        echo ${{ secrets.FIREBASE_CREDENTIALS }} | base64 --decode > ./firebase_credentials.json
+        echo "${{ secrets.FIREBASE_CREDENTIALS }}" | base64 --decode > ./firebase_credentials.json
 
     - name: Run Tests
       env:
