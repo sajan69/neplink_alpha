@@ -30,5 +30,7 @@ jobs:
     - name: Run Tests
       env:
         SECRET_KEY: ${{ secrets.SECRET_KEY }}
+        AGORA_APP_ID: ${{ secrets.AGORA_APP_ID }}
+        AGORA_APP_CERTIFICATE: ${{ secrets.AGORA_APP_CERTIFICATE }}
       run: |
         python manage.py test
