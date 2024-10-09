@@ -31,7 +31,8 @@ ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*').split(',')  # Split if ther
 
 # Application definition
 
-INSTALLED_APPS = [
+DEFAULT_APPS = [
+    # Django default apps
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -39,18 +40,29 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'daphne',
     'django.contrib.staticfiles',
-     'django.contrib.sites',
+    'django.contrib.sites',
+]
+
+THIRD_PARTY_APPS = [
+    # Third-party apps
+    
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
-
     'channels',
     'push_notifications',
+]
+
+LOCAL_APPS = [
+    # Local apps
     'accounts',
     'chat',
     'friends',
+    'post'
 ]
+
+INSTALLED_APPS = DEFAULT_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

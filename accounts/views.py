@@ -1,18 +1,21 @@
 from django.http import JsonResponse
 from django.views.generic import View, TemplateView
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.contrib.auth import login, authenticate, logout
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.core.mail import send_mail
-from requests import request
+
 
 from accounts.services import NotificationService
 from chat.models import ChatRoom
 from friends.models import FriendRequest, Friendship
+from post.models import CommentReply
 from .models import Notification, User
 from django.contrib import messages
+from django.core.paginator import Paginator
+from django.views.decorators.http import require_POST
 
 class UserRegisterView(View):
     template_name = 'accounts/register.html'
@@ -119,26 +122,53 @@ class UserPasswordChangeView(View):
         return redirect('accounts:login')
     
 
-   
+import json
+from django.http import JsonResponse
+from django.views.generic import ListView
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.shortcuts import get_object_or_404
+from django.urls import reverse
+from post.models import Post, Comment, CommentReply, Like
 
-@method_decorator(login_required, name='dispatch')
-class HomeView(TemplateView):
+
+class HomeView(LoginRequiredMixin, ListView):
+    model = Post
     template_name = 'accounts/home.html'
-    model = User
+    context_object_name = 'posts'
+    paginate_by = 10
+
+    def get_queryset(self):
+        """Return all posts ordered by creation date (newest first)."""
+        return Post.objects.all().order_by('-created_at')
 
     def get_context_data(self, **kwargs):
+        """Add additional context data for the template."""
         context = super().get_context_data(**kwargs)
-         # Get all users except the current user and their friends and friend requests received and sent
         context['unknown_users'] = User.objects.exclude(id=self.request.user.id).exclude(friends__user=self.request.user).exclude(friend_requests_received__from_user=self.request.user).exclude(friend_requests_sent__to_user=self.request.user)
-        # Get all unknown users who have friends that are friends with the current user
         context['suggested_users'] = User.objects.filter(friends__user__friends__user=self.request.user).exclude(id=self.request.user.id).exclude(friends__user=self.request.user).exclude(friend_requests_received__from_user=self.request.user).exclude(friend_requests_sent__to_user=self.request.user).distinct()
-        
-        # Get all friend requests received by the current user
         context['friend_requests'] = FriendRequest.objects.filter(to_user=self.request.user)
-        
-
         return context
+    
+    def post(self, request, *args, **kwargs):
+        caption = request.POST.get('caption')
+        feeling = request.POST.get('feeling')
+        media = request.FILES.get('media')
 
+        if not caption:
+            messages.error(request, 'Caption is required')
+            return redirect('accounts:home')
+
+        post = Post.objects.create(
+            user=request.user,
+            caption=caption,
+            feeling=feeling,
+            media=media
+        )
+
+        messages.success(request, 'Post created successfully!')
+        return redirect('accounts:home')
+
+    
 class LandingPageView(TemplateView):
     template_name = 'accounts/landing_page.html'
     
@@ -163,19 +193,16 @@ from django.db.models import Q, Prefetch
 from django.db.models import Q
 from push_notifications.models import GCMDevice
 
-@method_decorator(login_required, name='dispatch')
-class ProfileView(DetailView):
-    model = User
+class ProfileView(LoginRequiredMixin, View):
+    
     template_name = 'accounts/profile.html'
-    context_object_name = 'user'
+    
 
-    def get_object(self):
-        return get_object_or_404(User, username=self.kwargs['username'])
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        viewed_user = self.get_object()
-        current_user = self.request.user
+    
+    def get(self, request, username):
+        viewed_user = get_object_or_404(User, username=username)
+        current_user = request.user
+        context = {}
 
         # Check if the profile being viewed belongs to the current user
         context['is_own_profile'] = (current_user == viewed_user)
@@ -227,11 +254,15 @@ class ProfileView(DetailView):
         elif not context['is_own_profile']:
             context['action'] = 'add_friend'
 
+        # Fetch and paginate posts
+        posts = Post.objects.filter(user=viewed_user).order_by('-created_at')
+        context['posts'] = posts 
+
+
         # Add mutual friends to the context
         context['mutual_friends'] = mutual_friends
-        print(f'Friend requests sent: {context["friend_requests_sent"]}, received: {context["friend_requests_received"]}, mutual friends: {context["mutual_friends"]}') 
 
-        return context
+        return render(request, self.template_name, context)
 
 
 
@@ -309,8 +340,7 @@ class LogoutDeviceView(APIView):
             return Response({"success": True}, status=status.HTTP_200_OK)
         return Response({"error": "Device not found"}, status=status.HTTP_404_NOT_FOUND)
     
-from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from django.shortcuts import render
+
 
 def notifications_view(request):
     user = request.user
@@ -325,7 +355,6 @@ def notifications_view(request):
     return render(request, 'accounts/notifications.html', context)
 
 
-from django.views.decorators.http import require_POST  
 @require_POST
 def mark_notification_read(request, notification_id):
     user_id = request.user.id  # Assuming the user is authenticated
@@ -338,16 +367,5 @@ def mark_all_notifications_read(request):
     NotificationService.mark_all_notifications_as_read(user_id)
     return JsonResponse({'success': True})
 
-def global_view(request):
-    if request.user.is_authenticated:
-        unread_count = NotificationService.get_unread_notification_count(request.user.id)
-        friend_requests_count = FriendRequest.objects.filter(to_user=request.user).count()
-        messages_count = ChatRoom.objects.filter(participants=request.user).count()
-    
-    else:
-        unread_count = 0
-        friend_requests_count = 0
-        messages_count = 0
-   
-    print(f'Unread count: {unread_count}, friend requests count: {friend_requests_count}, messages count: {messages_count}')
-    return render({'unread_count': unread_count, 'friend_requests_count': friend_requests_count, 'messages_count': messages_count})
+
+

@@ -1,0 +1,12 @@
+{% extends 'left_column.html' %}
+{% load static %}
+{% load file_seperator %}
+{% block nav_content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            {% include 'post/post_card.html' with post=post %}
+        </div>
+    </div>
+</div>
+{% endblock %}

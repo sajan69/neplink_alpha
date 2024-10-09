@@ -7,17 +7,19 @@
     <h2 class="mb-4">Search Users</h2>
     <div class="row">
         <div class="col-md-12">
-            <div class="input-group mb-3">
-                <form method="get" action="{% url 'friends:user_search' %}">
-                    <input type="text" name="query" placeholder="Search users..." class="form-control" aria-label="Search users">
-                    <div class="input-group-append">
-                        <button class="btn btn-primary" type="submit" >
-                            <i class="fas fa-search"></i> Search
-                        </button>
-                    </div>
-                </form>
+            <form method="get" action="{% url 'friends:user_search' %}">
+            <div class="row">
+                <div class="col">
+                <input type="text" name="query" placeholder="Search users..." class="form-control" aria-label="Search users">
+                </div>
                 
+                <div class="col-auto">
+                <button class="btn btn-primary" type="submit">
+                    <i class="fas fa-search"></i> Search
+                </button>
+                </div>
             </div>
+            </form>
         </div>
     </div>
 

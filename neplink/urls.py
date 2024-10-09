@@ -35,6 +35,7 @@ urlpatterns = [
         ),
         name="firebase-messaging-sw.js"
     ),
+    path('post/', include('post.urls')),
 ]
 
 if settings.DEBUG:
