@@ -35,11 +35,9 @@ google-resumable-media==2.7.2
 googleapis-common-protos==1.65.0
 grpcio==1.66.2
 grpcio-status==1.66.2
-h2==2.6.2
 hpack==3.0.0
 http_ece==1.2.1
 httplib2==0.22.0
-hyper==0.7.0
 hyperlink==21.0.0
 idna==3.10
 incremental==24.7.2
