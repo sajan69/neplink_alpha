@@ -30,7 +30,7 @@ class UserRegisterView(View):
         contact = request.POST.get('contact')
         
         user = User.objects.create_user(username=username, email=email, password=password, contact=contact)
-        login(request, user)
+        login(request, user, backend='django.contrib.auth.backends.ModelBackend')
         return redirect('accounts:login')
 
 class UserLoginView(View):
@@ -44,9 +44,9 @@ class UserLoginView(View):
         password = request.POST.get('password')
         user = authenticate(request, username=username, password=password)
         if user is not None:
-            login(request, user)
+            login(request, user, backend='django.contrib.auth.backends.ModelBackend')
             return redirect('accounts:home')
-        return render(request, self.template_name, {'error': 'Invalid credentials'})
+        return render(request, self.template_name, messages.error(request, 'Invalid credentials')) 
 
 class PasswordResetView(View):
     template_name = 'accounts/password_reset.html'

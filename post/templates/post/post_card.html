@@ -11,6 +11,7 @@
         </div>
     </div>
     <div class="card-body">
+        <a href="{% url 'post:post_detail' post.id %}" style="text-decoration: none; color: inherit;">
         <p class="card-text post-caption">{{ post.caption }}</p>
         {% if post.media %}
             <div class="post-media mb-3">
@@ -27,6 +28,7 @@
         <p class="post-feeling"><i class="fas fa-smile"></i> Feeling {{ post.feeling }}</p>
         {% endif %}
     </div>
+    </a>
     <div class="card-footer">
         <form action="{% url 'post:post_management' %}" method="post" class="d-inline">
             {% csrf_token %}

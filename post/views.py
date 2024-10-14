@@ -202,7 +202,7 @@ class PostManagementView(LoginRequiredMixin, View):
     
 
 class PostDetailView(LoginRequiredMixin, View):
-    template_name = 'accounts/post_detail.html'
+    template_name = 'post/post_detail.html'
 
     def get(self, request, pk):
         post = get_object_or_404(Post, pk=pk)
