@@ -7,6 +7,7 @@ from django.utils import timezone
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
+
 class User(AbstractUser):
     contact = models.CharField(max_length=15, blank=True, null=True)
     profile_pic = models.ImageField(upload_to='profile_pics/', blank=True, null=True)
@@ -14,6 +15,9 @@ class User(AbstractUser):
     bio = models.TextField(blank=True, null=True)
     last_logged_in = models.DateTimeField(blank=True, null=True)  # Keep last_logged_in field
     last_active = models.DateTimeField(blank=True, null=True)  # New field to track activity
+    is_private = models.BooleanField(default=False)
+    show_email = models.BooleanField(default=False)
+    show_full_name = models.BooleanField(default=True)
 
     def __str__(self):
         return self.username
@@ -38,6 +42,11 @@ class User(AbstractUser):
             return f'{int(delta.total_seconds() / 86400)} days ago'
         
         return 'Never logged in'
+    
+    @property
+    def tag_settings(self):
+        settings, created = 'post.UserTagSettings'.objects.get_or_create(user=self) 
+        return settings
 
 
 # models.py (continued)

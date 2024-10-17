@@ -1,285 +1,864 @@
-{% load static %}  
+{% load static %}
 {% load file_seperator %}
+<style>
+   .media-grid {
+   display: grid;
+   grid-gap: 5px;
+   grid-template-columns: repeat(2, 1fr);
+   grid-template-rows: repeat(2, 1fr);
+   }
+   .media-item {
+   position: relative;
+   overflow: hidden;
+   padding-bottom: 100%;
+   }
+   .media-item.full {
+   grid-column: 1 / -1;
+   grid-row: 1 / -1;
+   }
+   .media-item.half {
+   grid-column: span 1;
+   grid-row: span 2;
+   }
+   .media-item.quarter {
+   grid-column: span 1;
+   grid-row: span 1;
+   }
+   .media-column {
+   display: grid;
+   grid-gap: 5px;
+   }
+   .media-item img,
+   .media-item video {
+   position: absolute;
+   top: 0;
+   left: 0;
+   width: 100%;
+   height: 100%;
+   }
+   .media-overlay {
+   position: absolute;
+   top: 0;
+   left: 0;
+   right: 0;
+   bottom: 0;
+   background: rgba(0, 0, 0, 0.5);
+   display: flex;
+   align-items: center;
+   justify-content: center;
+   color: white;
+   font-size: 2em;
+   font-weight: bold;
+   }
+   .carousel-item img,
+   .carousel-item video {
+   width: 100%;
+   max-height: 500px;
+   object-fit: contain;
+   }
+</style>
 <div class="card mb-4 post" id="post-{{ post.id }}">
-    <div class="card-header">
-        <div class="d-flex align-items-center">
-            <img src="{% if post.user.profile_pic %}{{ post.user.profile_pic.url }}{% else %}{% static 'img/default_profile_pic.png' %}{% endif %}" alt="{{ post.user.username }}" class="rounded-circle me-2" width="32" height="32">
-            <div>
-                <h6 class="mb-0">{{ post.user.username }}</h6>
-                <small class="text-muted">{{ post.created_at|timesince }} ago</small>
+   <div class="card-header d-flex justify-content-between align-items-center">
+      <div class="d-flex align-items-center">
+         <a href="{% url 'accounts:profile' post.user.username %}" class="text-decoration-none text-dark">
+         {% if post.user.profile_pic %}
+         <img src="{{ post.user.profile_pic.url }}" alt="{{ post.user.username }}" class="rounded-circle me-2" width="40" height="40">
+         {% else %}
+         <img src="{% static 'img/default_profile_pic.png' %}" alt="Default Profile Pic" class="rounded-circle me-2" width="40" height="40">
+         {% endif %}
+         </a>
+         <div>
+            <h6 class="mb-0"><a href="{% url 'accounts:profile' post.user.username %}" class="text-decoration-none text-dark">{{ post.user.username }}</a></h6>
+            <small class="text-muted">{{ post.created_at|timesince }} ago</small>
+         </div>
+      </div>
+      <div class="dropdown">
+         <button class="btn btn-link text-dark" type="button" id="postOptionsDropdown-{{ post.id }}" data-bs-toggle="dropdown" aria-expanded="false">
+         <i class="fas fa-ellipsis-v"></i>
+         </button>
+         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="postOptionsDropdown-{{ post.id }}">
+            {% if user == post.user %}
+            <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#editPostModal-{{ post.id }}"><i class="fas fa-edit me-2"></i>Edit</a></li>
+            <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#deletePostModal-{{ post.id }}"><i class="fas fa-trash-alt me-2"></i>Delete</a></li>
+            <li><a class="dropdown-item" href="#" onclick="event.preventDefault(); document.getElementById('hide-unhide-form-{{ post.id }}').submit();"><i class="fas fa-{% if post.is_hidden %}eye{% else %}eye-slash{% endif %} me-2"></i>{% if post.is_hidden %}Unhide{% else %}Hide{% endif %}</a></li>
+            <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#tagFriendsModal-{{ post.id }}"><i class="fas fa-user-tag me-2"></i>Tag Friends</a></li>
+            {% endif %}
+            <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#shareModal-{{ post.id }}"><i class="fas fa-share me-2"></i>Share</a></li>
+         </ul>
+      </div>
+   </div>
+   <div class="card-body">
+      {% if post.is_shared %}
+         <a href="{% url 'post:post_detail' post.id %}" class="text-decoration-none text-dark">
+         {% if post.feeling %}
+         <p class="mb-2">
+            {%if post.feeling == 'happy' %}
+            😊
+            {%elif post.feeling == 'sad' %}
+            😢
+            {%elif post.feeling == 'angry' %}
+            😠
+            {%elif post.feeling == 'surprised' %}
+            😲
+            {%elif post.feeling == 'love' %}
+            💖
+            {%elif post.feeling == 'thankful' %}
+            🙏
+            {%elif post.feeling == 'confused' %}
+            😕
+            {%elif post.feeling == 'excited' %}
+            🎉
+            {%elif post.feeling == 'calm' %}
+            😌
+            
+            {%endif%}Feeling {{ post.get_feeling_display }}</p>
+         {% endif %}
+         <p class="card-text">{{ post.caption }}</p>
+         </a>
+         {% if post.media.exists %}
+         <div class="post-media mb-3">
+            {% with images_and_videos=post.media.all|dictsort:"file_type" %}
+            {% with audio_files=post.media.all|dictsort:"file_type" %}
+            <div class="media-grid">
+               {% for media in images_and_videos %}
+               {% if media.file_type == 'image' or media.file_type == 'video' %}
+               {% if forloop.counter <= 4 %}
+               <div class="media-item {% if forloop.counter == 1 and forloop.revcounter == 1 %}full{% elif forloop.counter <= 2 and images_and_videos|length <= 2 %}half{% else %}quarter{% endif %}">
+                  {% include "post/media_item.html" with media=media %}
+                  {% if forloop.counter == 4 and images_and_videos|length > 4 %}
+                  <div class="media-overlay">
+                     <span>+{{ images_and_videos|length|add:"-4" }}</span>
+                  </div>
+                  {% endif %}
+               </div>
+               {% endif %}
+               {% endif %}
+               {% endfor %}
             </div>
-        </div>
-    </div>
-    <div class="card-body">
-        <a href="{% url 'post:post_detail' post.id %}" style="text-decoration: none; color: inherit;">
-        <p class="card-text post-caption">{{ post.caption }}</p>
-        {% if post.media %}
-            <div class="post-media mb-3">
-                {% if post.media.url|file_seperator == "image" %}
-                    <img src="{{ post.media.url }}" alt="Post image" class="img-fluid rounded">
-                {% elif post.media.url|file_seperator == "video" %}
-                    <video src="{{ post.media.url }}" controls class="img-fluid rounded"></video>
-                {% elif post.media.url|file_seperator == "audio" %}
-                    <audio src="{{ post.media.url }}" controls></audio>
-                {% endif %}
+            {% if images_and_videos|length > 4 %}
+            <div class="media-carousel mt-2">
+               <div id="mediaCarousel-{{ post.id }}" class="carousel slide" data-bs-ride="carousel">
+                  <div class="carousel-inner">
+                     {% for media in images_and_videos %}
+                     {% if media.file_type == 'image' or media.file_type == 'video' %}
+                     <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                        {% include "post/media_item.html" with media=media %}
+                     </div>
+                     {% endif %}
+                     {% endfor %}
+                  </div>
+                  <button class="carousel-control-prev" type="button" data-bs-target="#mediaCarousel-{{ post.id }}" data-bs-slide="prev">
+                  <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                  <span class="visually-hidden">Previous</span>
+                  </button>
+                  <button class="carousel-control-next" type="button" data-bs-target="#mediaCarousel-{{ post.id }}" data-bs-slide="next">
+                  <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                  <span class="visually-hidden">Next</span>
+                  </button>
+               </div>
             </div>
-        {% endif %}
-        {% if post.feeling %}
-        <p class="post-feeling"><i class="fas fa-smile"></i> Feeling {{ post.feeling }}</p>
-        {% endif %}
-    </div>
-    </a>
-    <div class="card-footer">
-        <form action="{% url 'post:post_management' %}" method="post" class="d-inline">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="like_post">
-            <input type="hidden" name="post_id" value="{{ post.id }}">
-            <button type="submit" class="btn btn-outline-primary btn-sm me-2">
-                {% if user in post.likes.all %}Unlike{% else %}Like{% endif %} ({{ post.likes.count }})
-            </button>
-        </form>
-        <button class="btn btn-outline-secondary btn-sm me-2" data-bs-toggle="collapse" data-bs-target="#comments-{{ post.id }}">
-            <i class="fas fa-comment me-1"></i> Comments ({{ post.comments.count }})
-        </button>
-        <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#shareModal-{{ post.id }}">
-            <i class="fas fa-share me-1"></i> Share
-        </button>
-        {% if post.user == user %}
-        <button class="btn btn-outline-primary btn-sm float-end" data-bs-toggle="modal" data-bs-target="#editPostModal-{{ post.id }}">Edit Post</button>
-        <form action="{% url 'post:post_management' %}" method="post" class="d-inline float-end me-2">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="delete_post">
-            <input type="hidden" name="post_id" value="{{ post.id }}">
-            <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Are you sure you want to delete this post?')">Delete Post</button>
-        </form>
-        {% endif %}
-    </div>
-    <div class="collapse" id="comments-{{ post.id }}">
-        <div class="card-body">
-            <form action="{% url 'post:post_management' %}" method="post" class="mb-3">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="add_comment">
-                <input type="hidden" name="post_id" value="{{ post.id }}">
-                <div class="input-group">
-                    <input type="text" class="form-control" name="text" placeholder="Write a comment...">
-                    <button type="submit" class="btn btn-primary">Comment</button>
-                </div>
-            </form>
-            <div id="comments-list-{{ post.id }}">
-                {% for comment in post.comments.all %}
-                    <div class="mb-2">
-                        <strong>{{ comment.user.username }}</strong>: {{ comment.text }}
-                        <small class="text-muted">{{ comment.created_at|timesince }} ago</small>
-                        <form action="{% url 'post:post_management' %}" method="post" class="d-inline">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="like_comment">
-                            <input type="hidden" name="post_id" value="{{ post.id }}">
-                            <input type="hidden" name="comment_id" value="{{ comment.id }}">
-                            <button type="submit" class="btn btn-outline-primary btn-sm">
-                                {% if user in comment.likes.all %}Unlike{% else %}Like{% endif %} ({{ comment.likes.count }})
-                            </button>
-                        </form>
-                        <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#reply-form-{{ comment.id }}">Reply</button>
-                        {% if comment.user == user %}
-                        <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#editCommentModal-{{ comment.id }}">Edit</button>
-                        <form action="{% url 'post:post_management' %}" method="post" class="d-inline">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="delete_comment">
-                            <input type="hidden" name="post_id" value="{{ post.id }}">
-                            <input type="hidden" name="comment_id" value="{{ comment.id }}">
-                            <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Are you sure you want to delete this comment?')">Delete</button>
-                        </form>
+            {% endif %}
+            <div class="audio-files mt-3">
+               {% for media in audio_files %}
+               {% if media.file_type == 'audio' %}
+               <div class="audio-item mb-2">
+                  <audio src="{{ media.file.url }}" controls class="w-100"></audio>
+                  <small class="text-muted">{{ media.file.name }}</small>
+               </div>
+               {% endif %}
+               {% endfor %}
+            </div>
+            {% endwith %}
+            {% endwith %}
+         </div>
+         {% endif %}
+         <div class="card mb-3">
+            <div class="card-body">
+               <div class="d-flex justify-content-between align-items-center mb-2">
+                  <div class="d-flex align-items-center">
+                     {% if post.shared_post.user.profile_pic %}
+                     <img src="{{ post.shared_post.user.profile_pic.url }}" alt="{{ post.shared_post.user.username }}" class="rounded-circle me-2" width="40" height="40">
+                     {% else %}
+                     <img src="{% static 'img/default_profile_pic.png' %}" alt="Default Profile Pic" class="rounded-circle me-2" width="40" height="40">
+                     {% endif %}
+                     <div>
+                        <h6 class="mb-0"><a href="{% url 'accounts:profile' post.shared_post.user.username %}" class="text-decoration-none text-dark">{{ post.shared_post.user.username }}</a></h6>
+                        <small class="text-muted">{{ post.shared_post.created_at|timesince }} ago</small>
+                     </div>
+                  </div>
+               </div>
+               <a href="{% url 'post:post_detail' post.shared_post.id %}" class="text-decoration-none text-dark">
+               {% if post.shared_post.feeling %}
+               <p class="mb-2"> 
+                  {%if post.shared_post.feeling == 'happy' %}
+                  😊
+                  {%elif post.shared_post.feeling == 'sad' %}
+                  😢
+                  {%elif post.shared_post.feeling == 'angry' %}
+                  😠
+                  {%elif post.shared_post.feeling == 'surprised' %}
+                  😲
+                  {%elif post.shared_post.feeling == 'love' %}
+                  💖
+                  {%elif post.shared_post.feeling == 'thankful' %}
+                  🙏
+                  {%elif post.shared_post.feeling == 'confused' %}
+                  😕
+                  {%elif post.shared_post.feeling == 'excited' %}
+                  🎉
+                  {%elif post.shared_post.feeling == 'calm' %}
+                  😌
+                  {%endif%}
+                  
+                  Feeling {{ post.shared_post.get_feeling_display }}</p>
+               {% endif %}
+               <p class="card-text">{{ post.shared_post.caption }}</p>
+               {% if post.shared_post.media.exists %}
+               <!-- Include shared post media here -->
+               <div class="post-media mb-3">
+                  {% with images_and_videos=post.shared_post.media.all|dictsort:"file_type" %}
+                  {% with audio_files=post.shared_post.media.all|dictsort:"file_type" %}
+                  <div class="media-grid">
+                     {% for media in images_and_videos %}
+                     {% if media.file_type == 'image' or media.file_type == 'video' %}
+                     {% if forloop.counter <= 4 %}
+                     <div class="media-item {% if forloop.counter == 1 and forloop.revcounter == 1 %}full{% elif forloop.counter <= 2 and images_and_videos|length <= 2 %}half{% else %}quarter{% endif %}">
+                        {% include "post/media_item.html" with media=media %}
+                        {% if forloop.counter == 4 and images_and_videos|length > 4 %}
+                        <div class="media-overlay">
+                           <span>+{{ images_and_videos|length|add:"-4" }}</span>
+                        </div>
                         {% endif %}
-                        <!-- Reply form -->
-                        <div class="collapse mt-2" id="reply-form-{{ comment.id }}">
-                            <form action="{% url 'post:post_management' %}" method="post">
-                                {% csrf_token %}
-                                <input type="hidden" name="action" value="add_reply">
-                                <input type="hidden" name="post_id" value="{{ post.id }}">
-                                <input type="hidden" name="comment_id" value="{{ comment.id }}">
-                                <div class="input-group">
-                                    <input type="text" class="form-control" name="text" placeholder="Write a reply...">
-                                    <button type="submit" class="btn btn-primary">Reply</button>
-                                </div>
-                            </form>
+                     </div>
+                     {% endif %}
+                     {% endif %}
+                     {% endfor %}
+                  </div>
+                  {% if images_and_videos|length > 4 %}
+                  <div class="media-carousel mt-2">
+                     <div id="mediaCarousel-{{ post.id }}" class="carousel slide" data-bs-ride="carousel">
+                        <div class="carousel-inner">
+                           {% for media in images_and_videos %}
+                           {% if media.file_type == 'image' or media.file_type == 'video' %}
+                           <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                              {% include "post/media_item.html" with media=media %}
+                           </div>
+                           {% endif %}
+                           {% endfor %}
                         </div>
-                        
-                        <!-- Replies -->
-                        <div class="ms-4 mt-2">
-                            {% for reply in comment.replies.all %}
-                                <div class="mb-2">
-                                    <strong>{{ reply.user.username }}</strong>: {{ reply.text }}
-                                    <small class="text-muted">{{ reply.created_at|timesince }} ago</small>
-                                    <form action="{% url 'post:post_management' %}" method="post" class="d-inline">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="action" value="like_reply">
-                                        <input type="hidden" name="post_id" value="{{ post.id }}">
-                                        <input type="hidden" name="reply_id" value="{{ reply.id }}">
-                                        <button type="submit" class="btn btn-outline-primary btn-sm">
-                                            {% if user in reply.likes.all %}Unlike{% else %}Like{% endif %} ({{ reply.likes.count }})
-                                        </button>
-                                    </form>
-                                    {% if reply.user == user %}
-                                    <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#editReplyModal-{{ reply.id }}">Edit</button>
-                                    <form action="{% url 'post:post_management' %}" method="post" class="d-inline">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="action" value="delete_reply">
-                                        <input type="hidden" name="post_id" value="{{ post.id }}">
-                                        <input type="hidden" name="reply_id" value="{{ reply.id }}">
-                                        <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Are you sure you want to delete this reply?')">Delete</button>
-                                    </form>
-                                    {% endif %}
-                                </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                {% endfor %}
+                        <button class="carousel-control-prev" type="button" data-bs-target="#mediaCarousel-{{ post.id }}" data-bs-slide="prev">
+                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                        <span class="visually-hidden">Previous</span>
+                        </button>
+                        <button class="carousel-control-next" type="button" data-bs-target="#mediaCarousel-{{ post.id }}" data-bs-slide="next">
+                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                        <span class="visually-hidden">Next</span>
+                        </button>
+                     </div>
+                  </div>
+                  {% endif %}
+                  <div class="audio-files mt-3">
+                     {% for media in audio_files %}
+                     {% if media.file_type == 'audio' %}
+                     <div class="audio-item mb-2">
+                        <audio src="{{ media.file.url }}" controls class="w-100"></audio>
+                        <small class="text-muted">{{ media.file.name }}</small>
+                     </div>
+                     {% endif %}
+                     {% endfor %}
+                  </div>
+                  {% endwith %}
+                  {% endwith %}
+               </div>
+               {% endif %}
+               </a>
             </div>
-        </div>
-    </div>
+         </div>
+      {% else %}
+         {% if post.feeling %}
+         <p class="mb-2">
+             {%if post.feeling == 'happy' %}
+             😊
+             {%elif post.feeling == 'sad' %}
+             😢
+             {%elif post.feeling == 'angry' %}
+             😠
+             {%elif post.feeling == 'surprised' %}
+             😲
+             {%elif post.feeling == 'love' %}
+             💖
+             {%elif post.feeling == 'thankful' %}
+             🙏
+             {%elif post.feeling == 'confused' %}
+             😕
+             {%elif post.feeling == 'excited' %}
+             🎉
+             {%elif post.feeling == 'calm' %}
+             😌
+             {%endif%} Feeling {{ post.get_feeling_display }}</p>
+         {% endif %}
+         <p class="card-text">{{ post.caption }}</p>
+         {% if post.media.exists %}
+         <div class="post-media mb-3">
+            {% with images_and_videos=post.media.all|dictsort:"file_type" %}
+            {% with audio_files=post.media.all|dictsort:"file_type" %}
+            <div class="media-grid">
+               {% for media in images_and_videos %}
+               {% if media.file_type == 'image' or media.file_type == 'video' %}
+               {% if forloop.counter <= 4 %}
+               <div class="media-item {% if forloop.counter == 1 and forloop.revcounter == 1 %}full{% elif forloop.counter <= 2 and images_and_videos|length <= 2 %}half{% else %}quarter{% endif %}">
+                  {% include "post/media_item.html" with media=media %}
+                  {% if forloop.counter == 4 and images_and_videos|length > 4 %}
+                  <div class="media-overlay">
+                     <span>+{{ images_and_videos|length|add:"-4" }}</span>
+                  </div>
+                  {% endif %}
+               </div>
+               {% endif %}
+               {% endif %}
+               {% endfor %}
+            </div>
+            {% if images_and_videos|length > 4 %}
+            <div class="media-carousel mt-2">
+               <div id="mediaCarousel-{{ post.id }}" class="carousel slide" data-bs-ride="carousel">
+                  <div class="carousel-inner">
+                     {% for media in images_and_videos %}
+                     {% if media.file_type == 'image' or media.file_type == 'video' %}
+                     <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                        {% include "post/media_item.html" with media=media %}
+                     </div>
+                     {% endif %}
+                     {% endfor %}
+                  </div>
+                  <button class="carousel-control-prev" type="button" data-bs-target="#mediaCarousel-{{ post.id }}" data-bs-slide="prev">
+                  <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                  <span class="visually-hidden">Previous</span>
+                  </button>
+                  <button class="carousel-control-next" type="button" data-bs-target="#mediaCarousel-{{ post.id }}" data-bs-slide="next">
+                  <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                  <span class="visually-hidden">Next</span>
+                  </button>
+               </div>
+            </div>
+            {% endif %}
+            <div class="audio-files mt-3">
+               {% for media in audio_files %}
+               {% if media.file_type == 'audio' %}
+               <div class="audio-item mb-2">
+                  <audio src="{{ media.file.url }}" controls class="w-100"></audio>
+                  <small class="text-muted">{{ media.file.name }}</small>
+               </div>
+               {% endif %}
+               {% endfor %}
+            </div>
+            {% endwith %}
+            {% endwith %}
+         </div>
+         {% endif %}
+      {% endif %}
+      {% if post.tagged_users.exists %}
+      <p class="mb-2"><small class="text-muted">Tagged: 
+         {% for tagged_user in post.tagged_users.all %}
+         <a href="{% url 'accounts:profile' tagged_user.username %}" class="text-decoration-none">{{ tagged_user.username }}</a>{% if not forloop.last %}, {% endif %}
+         {% endfor %}
+         </small>
+      </p>
+      {% endif %}
+      <div class="d-flex justify-content-between align-items-center">
+         <div>
+            <button class="btn btn-link text-dark p-0 me-3" onclick="document.getElementById('like-form-{{ post.id }}').submit();">
+            <i class="fas fa-thumbs-up me-1"></i>{{ post.likes.count }}
+            </button>
+            <button class="btn btn-link text-dark p-0" data-bs-toggle="collapse" data-bs-target="#comments-{{ post.id }}">
+            <i class="fas fa-comment me-1"></i>{{ post.comments.count }}
+            </button>
+         </div>
+         <small class="text-muted">
+         {% if post.visibility == 'everyone' %}
+         <i class="fas fa-globe"></i>
+         {% elif post.visibility == 'friends' %}
+         <i class="fas fa-user-friends"></i>
+         {% elif post.visibility == 'private' %}
+         <i class="fas fa-lock"></i>
+         {% elif post.visibility == 'selected' %}
+         <i class="fas fa-user-check"></i>
+         {% endif %}
+         {{ post.get_visibility_display }}
+         </small>
+      </div>
+   </div>
+   <div class="collapse" id="comments-{{ post.id }}">
+      <div class="card-body pt-0">
+         <form action="{% url 'post:post_management' %}" method="post" class="mb-3">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add_comment">
+            <input type="hidden" name="post_id" value="{{ post.id }}">
+            <div class="input-group">
+               <input type="text" class="form-control" name="text" placeholder="Add a comment...">
+               <button class="btn btn-outline-primary" type="submit">Post</button>
+            </div>
+         </form>
+         {% for comment in post.comments.all %}
+         <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center">
+               <h6 class="mb-0">{{ comment.user.username }}</h6>
+               <small class="text-muted">{{ comment.created_at|timesince }} ago</small>
+            </div>
+            <p class="mb-1">{{ comment.text }}</p>
+            <div class="d-flex justify-content-between align-items-center">
+               <button class="btn btn-link text-dark p-0 btn-sm" onclick="document.getElementById('like-comment-form-{{ comment.id }}').submit();">
+               <i class="fas fa-thumbs-up me-1"></i>{{ comment.likes.count }}
+               </button>
+               <div>
+                  {% if user == comment.user %}
+                  <button class="btn btn-link text-dark p-0 btn-sm me-2" data-bs-toggle="modal" data-bs-target="#editCommentModal-{{ comment.id }}">Edit</button>
+                  <button class="btn btn-link text-danger p-0 btn-sm" data-bs-toggle="modal" data-bs-target="#deleteCommentModal-{{ comment.id }}">Delete</button>
+                  {% endif %}
+                  <button class="btn btn-link text-dark p-0 btn-sm" onclick="toggleReplyForm({{ comment.id }})">Reply</button>
+               </div>
+            </div>
+            <div id="reply-form-{{ comment.id }}" style="display: none;">
+               <form action="{% url 'post:post_management' %}" method="post" class="mt-2">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="add_reply">
+                  <input type="hidden" name="post_id" value="{{ post.id }}">
+                  <input type="hidden" name="comment_id" value="{{ comment.id }}">
+                  <div class="input-group">
+                     <input type="text" class="form-control" name="text" placeholder="Write a reply...">
+                     <button class="btn btn-outline-primary" type="submit">Reply</button>
+                  </div>
+               </form>
+            </div>
+            {% for reply in comment.replies.all %}
+            <div class="ms-4 mt-2">
+               <div class="d-flex justify-content-between align-items-center">
+                  <h6 class="mb-0">{{ reply.user.username }}</h6>
+                  <small class="text-muted">{{ reply.created_at|timesince }} ago</small>
+               </div>
+               <p class="mb-1">{{ reply.text }}</p>
+               <div class="d-flex justify-content-between align-items-center">
+                  <button class="btn btn-link text-dark p-0 btn-sm" onclick="document.getElementById('like-reply-form-{{ reply.id }}').submit();">
+                  <i class="fas fa-thumbs-up me-1"></i>{{ reply.likes.count }}
+                  </button>
+                  {% if user == reply.user %}
+                  <div>
+                     <button class="btn btn-link text-dark p-0 btn-sm me-2" data-bs-toggle="modal" data-bs-target="#editReplyModal-{{ reply.id }}">Edit</button>
+                     <button class="btn btn-link text-danger p-0 btn-sm" data-bs-toggle="modal" data-bs-target="#deleteReplyModal-{{ reply.id }}">Delete</button>
+                  </div>
+                  {% endif %}
+               </div>
+            </div>
+            {% endfor %}
+         </div>
+         {% endfor %}
+      </div>
+   </div>
 </div>
 
 <!-- Edit Post Modal -->
 <div class="modal fade" id="editPostModal-{{ post.id }}" tabindex="-1" aria-labelledby="editPostModalLabel-{{ post.id }}" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form action="{% url 'post:post_management' %}" method="post" enctype="multipart/form-data">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="edit_post">
-                <input type="hidden" name="post_id" value="{{ post.id }}">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="editPostModalLabel-{{ post.id }}">Edit Post</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="caption-{{ post.id }}" class="form-label">Caption</label>
-                        <textarea class="form-control" id="caption-{{ post.id }}" name="caption" rows="3">{{ post.caption }}</textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label for="feeling-{{ post.id }}" class="form-label">Feeling</label>
-                        <select class="form-select" id="feeling-{{ post.id }}" name="feeling">
-                            <option value="">How are you feeling?</option>
-                            <option value="happy" {% if post.feeling == 'happy' %}selected{% endif %}>Happy</option>
-                            <option value="sad" {% if post.feeling == 'sad' %}selected{% endif %}>Sad</option>
-                            <option value="excited" {% if post.feeling == 'excited' %}selected{% endif %}>Excited</option>
-                            <option value="angry" {% if post.feeling == 'angry' %}selected{% endif %}>Angry</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label for="media-{{ post.id }}" class="form-label">Media</label>
-                        <input type="file" class="form-control" id="media-{{ post.id }}" name="media">
-                        {% if post.media %}
-                            <div class="mt-2">
-                                {% if post.media.url|file_seperator == "image" %}
-                                <img src="{{ post.media.url }}" alt="Post image" class="img-fluid rounded">
-                                {% elif post.media.url|file_seperator == "video" %}
-                                    <video src="{{ post.media.url }}" controls class="img-fluid rounded"></video>
-                                {% elif post.media.url|file_seperator == "audio" %}
-                                    <audio src="{{ post.media.url }}" controls></audio>
-                                {% endif %}
-                            </div>
+   <div class="modal-dialog">
+      <div class="modal-content">
+         <form action="{% url 'post:post_management' %}" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="edit_post">
+            <input type="hidden" name="post_id" value="{{ post.id }}">
+            <div class="modal-header">
+               <h5 class="modal-title" id="editPostModalLabel-{{ post.id }}">Edit Post</h5>
+               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+               <div class="mb-3">
+                  <label for="caption-{{ post.id }}" class="form-label">Caption</label>
+                  <textarea class="form-control" id="caption-{{ post.id }}" name="caption" rows="3">{{ post.caption }}</textarea>
+               </div>
+               <div class="mb-3">
+                  <label for="feeling-{{ post.id }}" class="form-label">Feeling</label>
+                  <select class="form-select" id="feeling-{{ post.id }}" name="feeling">
+                     <option value="">How are you feeling?</option>
+                     <option value="happy" {% if post.feeling == 'happy' %}selected{% endif %}>Happy</option>
+                     <option value="sad" {% if post.feeling == 'sad' %}selected{% endif %}>Sad</option>
+                     <option value="excited" {% if post.feeling == 'excited' %}selected{% endif %}>Excited</option>
+                     <option value="angry" {% if post.feeling == 'angry' %}selected{% endif %}>Angry</option>
+                  </select>
+               </div>
+               <div class="mb-3">
+                  <label for="visibility-{{ post.id }}" class="form-label">Visibility</label>
+                  <select class="form-select" id="visibility-{{ post.id }}" name="visibility">
+                     <option value="everyone" {% if post.visibility == 'everyone' %}selected{% endif %}>Everyone</option>
+                     <option value="friends" {% if post.visibility == 'friends' %}selected{% endif %}>Friends</option>
+                     <option value="private" {% if post.visibility == 'private' %}selected{% endif %}>Private</option>
+                     <option value="selected" {% if post.visibility == 'selected' %}selected{% endif %}>Selected Friends</option>
+                  </select>
+               </div>
+               <div id="selectedFriendsContainer-{{ post.id }}" class="mb-3" {% if post.visibility != 'selected' %}style="display: none;"{% endif %}>
+                  <label for="selected_friends-{{ post.id }}" class="form-label">Selected Friends</label>
+                  <select class="form-select" id="selected_friends-{{ post.id }}" name="selected_friends" multiple>
+                     {% for friendship in friends %}
+                     <option value="{{ friendship.friend.id }}" {% if friendship.friend in post.selected_friends.all %}selected{% endif %}>{{ friendship.friend.username }}</option>
+                     {% endfor %}
+                  </select>
+               </div>
+               <div class="mb-3">
+                  <label for="files-{{ post.id }}" class="form-label">Media</label>
+                  <input type="file" class="form-control" id="files-{{ post.id }}" name="files" multiple>
+                  <div id="filePreview-{{ post.id }}" class="mt-2">
+                     {% for media in post.media.all %}
+                     <div class="preview-item mb-2">
+                        {% if media.file_type == 'image' %}
+                        <img src="{{ media.file.url }}" alt="Post image" style="max-width: 100px; max-height: 100px;">
+                        {% elif media.file_type == 'video' %}
+                        <video src="{{ media.file.url }}" style="max-width: 100px; max-height: 100px;"></video>
+                        {% elif media.file_type == 'audio' %}
+                        <audio src="{{ media.file.url }}" controls></audio>
                         {% endif %}
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="submit" class="btn btn-primary">Save changes</button>
-                </div>
-            </form>
-        </div>
-    </div>
+                        <span>{{ media.file.name }}</span>
+                        <button type="button" class="btn btn-sm btn-danger remove-file" data-media-id="{{ media.id }}">Remove</button>
+                     </div>
+                     {% endfor %}
+                  </div>
+               </div>
+            </div>
+            <div class="modal-footer">
+               <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+               <button type="submit" class="btn btn-primary">Save changes</button>
+            </div>
+         </form>
+      </div>
+   </div>
 </div>
-
+<!-- Delete Post Modal -->
+<div class="modal fade" id="deletePostModal-{{ post.id }}" tabindex="-1" aria-labelledby="deletePostModalLabel-{{ post.id }}" aria-hidden="true">
+   <div class="modal-dialog">
+      <div class="modal-content">
+         <div class="modal-header">
+            <h5 class="modal-title" id="deletePostModalLabel-{{ post.id }}">Delete Post</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+         </div>
+         <div class="modal-body">
+            Are you sure you want to delete this post?
+         </div>
+         <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <form action="{% url 'post:post_management' %}" method="post">
+               {% csrf_token %}
+               <input type="hidden" name="action" value="delete_post">
+               <input type="hidden" name="post_id" value="{{ post.id }}">
+               <button type="submit" class="btn btn-danger">Delete</button>
+            </form>
+         </div>
+      </div>
+   </div>
+</div>
 <!-- Edit Comment Modal -->
 {% for comment in post.comments.all %}
-    {% if comment.user == user %}
-    <div class="modal fade" id="editCommentModal-{{ comment.id }}" tabindex="-1" aria-labelledby="editCommentModalLabel-{{ comment.id }}" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <form action="{% url 'post:post_management' %}" method="post">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="edit_comment">
-                    <input type="hidden" name="post_id" value="{{ post.id }}">
-                    <input type="hidden" name="comment_id" value="{{ comment.id }}">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="editCommentModalLabel-{{ comment.id }}">Edit Comment</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label for="comment-text-{{ comment.id }}" class="form-label">Comment</label>
-                            <textarea class="form-control" id="comment-text-{{ comment.id }}" name="text" rows="3">{{ comment.text }}</textarea>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                        <button type="submit" class="btn btn-primary">Save changes</button>
-                    </div>
-                </form>
+<div class="modal fade" id="editCommentModal-{{ comment.id }}" tabindex="-1" aria-labelledby="editCommentModalLabel-{{ comment.id }}" aria-hidden="true">
+   <div class="modal-dialog">
+      <div class="modal-content">
+         <form action="{% url 'post:post_management' %}" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="edit_comment">
+            <input type="hidden" name="post_id" value="{{ post.id }}">
+            <input type="hidden" name="comment_id" value="{{ comment.id }}">
+            <div class="modal-header">
+               <h5 class="modal-title" id="editCommentModalLabel-{{ comment.id }}">Edit Comment</h5>
+               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-        </div>
-    </div>
-    {% endif %}
-{% endfor %}
-
-<!-- Share Post Modal -->
-<div class="modal fade" id="shareModal-{{ post.id }}" tabindex="-1" aria-labelledby="shareModalLabel-{{ post.id }}" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form action="{% url 'post:post_management' %}" method="post">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="share_post">
-                <input type="hidden" name="post_id" value="{{ post.id }}">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="shareModalLabel-{{ post.id }}">Share Post</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="share-caption-{{ post.id }}" class="form-label">Add a caption (optional)</label>
-                        <textarea class="form-control" id="share-caption-{{ post.id }}" name="share_caption" rows="3"></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="submit" class="btn btn-primary">Share</button>
-                </div>
-            </form>
-        </div>
-    </div>
+            <div class="modal-body">
+               <div class="mb-3">
+                  <label for="comment-text-{{ comment.id }}" class="form-label">Comment</label>
+                  <textarea class="form-control" id="comment-text-{{ comment.id }}" name="text" rows="3">{{ comment.text }}</textarea>
+               </div>
+            </div>
+            <div class="modal-footer">
+               <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+               <button type="submit" class="btn btn-primary">Save changes</button>
+            </div>
+         </form>
+      </div>
+   </div>
 </div>
-
+{% endfor %}
+<!-- Delete Comment Modal -->
+{% for comment in post.comments.all %}
+<div class="modal fade" id="deleteCommentModal-{{ comment.id }}" tabindex="-1" aria-labelledby="deleteCommentModalLabel-{{ comment.id }}" aria-hidden="true">
+   <div class="modal-dialog">
+      <div class="modal-content">
+         <div class="modal-header">
+            <h5 class="modal-title" id="deleteCommentModalLabel-{{ comment.id }}">Delete Comment</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+         </div>
+         <div class="modal-body">
+            Are you sure you want to delete this comment?
+         </div>
+         <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <form action="{% url 'post:post_management' %}" method="post">
+               {% csrf_token %}
+               <input type="hidden" name="action" value="delete_comment">
+               <input type="hidden" name="post_id" value="{{ post.id }}">
+               <input type="hidden" name="comment_id" value="{{ comment.id }}">
+               <button type="submit" class="btn btn-danger">Delete</button>
+            </form>
+         </div>
+      </div>
+   </div>
+</div>
+{% endfor %}
 <!-- Edit Reply Modal -->
 {% for comment in post.comments.all %}
-    {% for reply in comment.replies.all %}
-        {% if reply.user == user %}
-        <div class="modal fade" id="editReplyModal-{{ reply.id }}" tabindex="-1" aria-labelledby="editReplyModalLabel-{{ reply.id }}" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <form action="{% url 'post:post_management' %}" method="post">
-                        {% csrf_token %}
-                        <input type="hidden" name="action" value="edit_reply">
-                        <input type="hidden" name="post_id" value="{{ post.id }}">
-                        <input type="hidden" name="reply_id" value="{{ reply.id }}">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="editReplyModalLabel-{{ reply.id }}">Edit Reply</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="mb-3">
-                                <label for="reply-text-{{ reply.id }}" class="form-label">Reply</label>
-                                <textarea class="form-control" id="reply-text-{{ reply.id }}" name="text" rows="3">{{ reply.text }}</textarea>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                            <button type="submit" class="btn btn-primary">Save changes</button>
-                        </div>
-                    </form>
-                </div>
+{% for reply in comment.replies.all %}
+<div class="modal fade" id="editReplyModal-{{ reply.id }}" tabindex="-1" aria-labelledby="editReplyModalLabel-{{ reply.id }}" aria-hidden="true">
+   <div class="modal-dialog">
+      <div class="modal-content">
+         <form action="{% url 'post:post_management' %}" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="edit_reply">
+            <input type="hidden" name="post_id" value="{{ post.id }}">
+            <input type="hidden" name="reply_id" value="{{ reply.id }}">
+            <div class="modal-header">
+               <h5 class="modal-title" id="editReplyModalLabel-{{ reply.id }}">Edit Reply</h5>
+               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-        </div>
-        {% endif %}
-    {% endfor %}
+            <div class="modal-body">
+               <div class="mb-3">
+                  <label for="reply-text-{{ reply.id }}" class="form-label">Reply</label>
+                  <textarea class="form-control" id="reply-text-{{ reply.id }}" name="text" rows="3">{{ reply.text }}</textarea>
+               </div>
+            </div>
+            <div class="modal-footer">
+               <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+               <button type="submit" class="btn btn-primary">Save changes</button>
+            </div>
+         </form>
+      </div>
+   </div>
+</div>
 {% endfor %}
+{% endfor %}
+<!-- Delete Reply Modal -->
+{% for comment in post.comments.all %}
+{% for reply in comment.replies.all %}
+<div class="modal fade" id="deleteReplyModal-{{ reply.id }}" tabindex="-1" aria-labelledby="deleteReplyModalLabel-{{ reply.id }}" aria-hidden="true">
+   <div class="modal-dialog">
+      <div class="modal-content">
+         <div class="modal-header">
+            <h5 class="modal-title" id="deleteReplyModalLabel-{{ reply.id }}">Delete Reply</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+         </div>
+         <div class="modal-body">
+            Are you sure you want to delete this reply?
+         </div>
+         <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <form action="{% url 'post:post_management' %}" method="post">
+               {% csrf_token %}
+               <input type="hidden" name="action" value="delete_reply">
+               <input type="hidden" name="post_id" value="{{ post.id }}">
+               <input type="hidden" name="reply_id" value="{{ reply.id }}">
+               <button type="submit" class="btn btn-danger">Delete</button>
+            </form>
+         </div>
+      </div>
+   </div>
+</div>
+{% endfor %}
+{% endfor %}
+<!-- Share Post Modal -->
+<div class="modal fade" id="shareModal-{{ post.id }}" tabindex="-1" aria-labelledby="shareModalLabel-{{ post.id }}" aria-hidden="true">
+   <div class="modal-dialog">
+      <div class="modal-content">
+         <form action="{% url 'post:post_management' %}" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="share_post">
+            <input type="hidden" name="post_id" value="{{ post.id }}">
+            <div class="modal-header">
+               <h5 class="modal-title" id="shareModalLabel-{{ post.id }}">Share Post</h5>
+               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+               <div class="mb-3">
+                  <label for="share-caption-{{ post.id }}" class="form-label">Add a caption</label>
+                  <textarea class="form-control" id="share-caption-{{ post.id }}" name="share_caption" rows="3"></textarea>
+               </div>
+               <div class="mb-3">
+                  <label for="share-feeling-{{ post.id }}" class="form-label">Feeling</label>
+                  <select class="form-select" id="share-feeling-{{ post.id }}" name="feeling">
+                     <option value="">How are you feeling?</option>
+                     <option value="happy">Happy</option>
+                     <option value="sad">Sad</option>
+                     <option value="excited">Excited</option>
+                     <option value="angry">Angry</option>
+                  </select>
+               </div>
+               <div class="mb-3">
+                  <label for="share-visibility-{{ post.id }}" class="form-label">Visibility</label>
+                  <select class="form-select" id="share-visibility-{{ post.id }}" name="visibility">
+                     <option value="everyone">Everyone</option>
+                     <option value="friends">Friends</option>
+                     <option value="private">Private</option>
+                     <option value="selected">Selected Friends</option>
+                  </select>
+               </div>
+               <div id="shareSelectedFriendsContainer-{{ post.id }}" class="mb-3" style="display: none;">
+                  <label for="share-selected-friends-{{ post.id }}" class="form-label">Selected Friends</label>
+                  <select class="form-select" id="share-selected-friends-{{ post.id }}" name="selected_friends" multiple>
+                     {% for friendship in friends %}
+                     <option value="{{ friendship.friend.id }}">{{ friendship.friend.username }}</option>
+                     {% endfor %}
+                  </select>
+               </div>
+            </div>
+            <div class="modal-footer">
+               <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+               <button type="submit" class="btn btn-primary">Share</button>
+            </div>
+         </form>
+      </div>
+   </div>
+</div>
+<!-- Tag Friends Modal -->
+<div class="modal fade" id="tagFriendsModal-{{ post.id }}" tabindex="-1" aria-labelledby="tagFriendsModalLabel-{{ post.id }}" aria-hidden="true">
+   <div class="modal-dialog">
+      <div class="modal-content">
+         <form action="{% url 'post:post_management' %}" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="tag_friends">
+            <input type="hidden" name="post_id" value="{{ post.id }}">
+            <div class="modal-header">
+               <h5 class="modal-title" id="tagFriendsModalLabel-{{ post.id }}">Tag Friends</h5>
+               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+               <div class="mb-3">
+                  <label for="tagged-friends-{{ post.id }}" class="form-label">Select friends to tag:</label>
+                  <select class="form-select" id="tagged-friends-{{ post.id }}" name="tagged_friends" multiple>
+                     {% for friendship in friends %}
+                     <option value="{{ friendship.friend.id }}">{{ friendship.friend.username }}</option>
+                     {% endfor %}
+                  </select>
+               </div>
+            </div>
+            <div class="modal-footer">
+               <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+               <button type="submit" class="btn btn-primary">Tag Friends</button>
+            </div>
+         </form>
+      </div>
+   </div>
+</div>
+<!-- Hidden forms for post actions -->
+<form id="like-form-{{ post.id }}" action="{% url 'post:post_management' %}" method="post" style="display: none;">
+   {% csrf_token %}
+   <input type="hidden" name="action" value="like_post">
+   <input type="hidden" name="post_id" value="{{ post.id }}">
+</form>
+<form id="hide-unhide-form-{{ post.id }}" action="{% url 'post:post_management' %}" method="post" style="display: none;">
+   {% csrf_token %}
+   <input type="hidden" name="action" value="hide_unhide_post">
+   <input type="hidden" name="post_id" value="{{ post.id }}">
+</form>
+{% for comment in post.comments.all %}
+<form id="like-comment-form-{{ comment.id }}" action="{% url 'post:post_management' %}" method="post" style="display: none;">
+   {% csrf_token %}
+   <input type="hidden" name="action" value="like_comment">
+   <input type="hidden" name="post_id" value="{{ post.id }}">
+   <input type="hidden" name="comment_id" value="{{ comment.id }}">
+</form>
+{% endfor %}
+{% for comment in post.comments.all %}
+{% for reply in comment.replies.all %}
+<form id="like-reply-form-{{ reply.id }}" action="{% url 'post:post_management' %}" method="post" style="display: none;">
+   {% csrf_token %}
+   <input type="hidden" name="action" value="like_reply">
+   <input type="hidden" name="post_id" value="{{ post.id }}">
+   <input type="hidden" name="reply_id" value="{{ reply.id }}">
+</form>
+{% endfor %}
+{% endfor %}
+<script>
+   document.addEventListener('DOMContentLoaded', function() {
+       const visibilitySelect = document.getElementById('visibility-{{ post.id }}');
+       const selectedFriendsContainer = document.getElementById('selectedFriendsContainer-{{ post.id }}');
+       const fileInput = document.getElementById('files-{{ post.id }}');
+       const filePreview = document.getElementById('filePreview-{{ post.id }}');
+       const maxFiles = 5;
+   
+       visibilitySelect.addEventListener('change', function() {
+           if (this.value === 'selected') {
+               selectedFriendsContainer.style.display = 'block';
+           } else {
+               selectedFriendsContainer.style.display = 'none';
+           }
+       });
+   
+       fileInput.addEventListener('change', function() {
+           if (this.files.length > maxFiles) {
+               alert(`You can only upload a maximum of ${maxFiles} files.`);
+               this.value = '';
+               return;
+           }
+           
+           for (let i = 0; i < this.files.length; i++) {
+               const file = this.files[i];
+               const reader = new FileReader();	
+               const previewItem = document.createElement('div');
+               previewItem.className = 'preview-item mb-2';
+   
+               reader.onload = function(e) {
+                   if (file.type.startsWith('image/')) {
+                       previewItem.innerHTML = `
+                           <img src="${e.target.result}" alt="Preview" style="max-width: 100px; max-height: 100px;">
+                           <span>${file.name}</span>
+                           <button type="button" class="btn btn-sm btn-danger remove-file">Remove</button>
+                       `;
+                   } else if (file.type.startsWith('video/')) {
+                       previewItem.innerHTML = `
+                           <video src="${e.target.result}" style="max-width: 100px; max-height: 100px;"></video>
+                           <span>${file.name}</span>
+                           <button type="button" class="btn btn-sm btn-danger remove-file">Remove</button>
+                       `;
+                   } else {
+                       previewItem.innerHTML = `
+                           <i class="fas fa-file"></i>
+                           <span>${file.name}</span>
+                           <button type="button" class="btn btn-sm btn-danger remove-file">Remove</button>
+                       `;
+                   }
+               }
+               reader.readAsDataURL(file);
+               filePreview.appendChild(previewItem);
+           }
+       });
+   
+       filePreview.addEventListener('click', function(e) {
+           if (e.target.classList.contains('remove-file')) {
+               const mediaId = e.target.dataset.mediaId;
+               if (mediaId) {
+                   const deletedMediaInput = document.createElement('input');
+                   deletedMediaInput.type = 'hidden';
+                   deletedMediaInput.name = 'deleted_media';
+                   deletedMediaInput.value = mediaId;
+                   e.target.closest('form').appendChild(deletedMediaInput);
+               }
+               e.target.closest('.preview-item').remove();
+           }
+       });
+   
+       const shareVisibilitySelect = document.getElementById('share-visibility-{{ post.id }}');
+       const shareSelectedFriendsContainer = document.getElementById('shareSelectedFriendsContainer-{{ post.id }}');
+   
+       shareVisibilitySelect.addEventListener('change', function() {
+           if (this.value === 'selected') {
+               shareSelectedFriendsContainer.style.display = 'block';
+           } else {
+               shareSelectedFriendsContainer.style.display = 'none';
+           }
+       });
+   });
+   
+   function toggleReplyForm(commentId) {
+       const replyForm = document.getElementById(`reply-form-${commentId}`);
+       replyForm.style.display = replyForm.style.display === 'none' ? 'block' : 'none';
+   }
+</script>

@@ -11,7 +11,7 @@ from django.core.mail import send_mail
 from accounts.services import NotificationService
 from chat.models import ChatRoom
 from friends.models import FriendRequest, Friendship
-from post.models import CommentReply
+from post.models import CommentReply, PostMedia, SelectedFriend, UserTagSettings
 from .models import Notification, User
 from django.contrib import messages
 from django.core.paginator import Paginator
@@ -128,9 +128,10 @@ from django.views.generic import ListView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
-from post.models import Post, Comment, CommentReply, Like
-
-
+from post.models import Post, Comment, CommentReply, Like, PostMedia
+from django.db import transaction
+from django.db.models import Q
+from django.db import models
 class HomeView(LoginRequiredMixin, ListView):
     model = Post
     template_name = 'accounts/home.html'
@@ -138,8 +139,16 @@ class HomeView(LoginRequiredMixin, ListView):
     paginate_by = 10
 
     def get_queryset(self):
-        """Return all posts ordered by creation date (newest first)."""
-        return Post.objects.all().order_by('-created_at')
+        """Return all non-hidden posts ordered by creation date (newest first)."""
+        user = self.request.user
+        friends = Friendship.objects.filter(user=user).values_list('friend', flat=True)
+        
+        return Post.objects.filter(
+            models.Q(visibility='everyone') |
+            (models.Q(visibility='friends') & (models.Q(user__in=friends) | models.Q(user=user))) |
+            (models.Q(visibility='private') & models.Q(user=user)) |
+            (models.Q(visibility='selected') & (models.Q(selected_friends__friend=user) | models.Q(user=user)))
+        ).distinct().order_by('-created_at')
 
     def get_context_data(self, **kwargs):
         """Add additional context data for the template."""
@@ -147,31 +156,74 @@ class HomeView(LoginRequiredMixin, ListView):
         context['unknown_users'] = User.objects.exclude(id=self.request.user.id).exclude(friends__user=self.request.user).exclude(friend_requests_received__from_user=self.request.user).exclude(friend_requests_sent__to_user=self.request.user)
         context['suggested_users'] = User.objects.filter(friends__user__friends__user=self.request.user).exclude(id=self.request.user.id).exclude(friends__user=self.request.user).exclude(friend_requests_received__from_user=self.request.user).exclude(friend_requests_sent__to_user=self.request.user).distinct()
         context['friend_requests'] = FriendRequest.objects.filter(to_user=self.request.user)
+        context['friends'] = Friendship.objects.filter(user=self.request.user).select_related('friend')
+
         return context
     
     def post(self, request, *args, **kwargs):
         caption = request.POST.get('caption')
         feeling = request.POST.get('feeling')
-        media = request.FILES.get('media')
+        visibility = request.POST.get('visibility')
+        files = request.FILES.getlist('files')
+        selected_friends = request.POST.getlist('selected_friends')
+        tagged_friends = request.POST.getlist('tagged_friends')
 
-        if not caption:
-            messages.error(request, 'Caption is required')
+        if not caption and not files:
+            messages.error(request, 'Please provide a caption or upload media files.')
             return redirect('accounts:home')
 
-        post = Post.objects.create(
-            user=request.user,
-            caption=caption,
-            feeling=feeling,
-            media=media
-        )
+        try:
+            with transaction.atomic():
+                post = Post.objects.create(
+                    user=request.user,
+                    caption=caption,
+                    feeling=feeling,
+                    visibility=visibility
+                )
 
-        messages.success(request, 'Post created successfully!')
+                for file in files:
+                    file_type = self.get_file_type(file.name)
+                    PostMedia.objects.create(
+                        post=post,
+                        file=file,
+                        file_type=file_type
+                    )
+
+                if visibility == 'selected':
+                    for friend_id in selected_friends:
+                        SelectedFriend.objects.create(post=post, friend_id=friend_id)
+
+                if tagged_friends:
+                    for friend_id in tagged_friends:
+                        friend = get_object_or_404(User, id=friend_id)
+                        if friend.tag_settings.allow_tagging:
+                            post.tagged_users.add(friend)
+                            NotificationService.send_notification_to_userids(
+                                f"{request.user.username} tagged you in a post",
+                                f"{request.user.username} tagged you in a post: {post.caption[:50]}...",
+                                [friend.id],
+                                reverse('post:post_detail', args=[post.id])
+                            )
+
+            messages.success(request, 'Post created successfully!')
+        except Exception as e:
+            messages.error(request, f'An error occurred while creating the post: {str(e)}')
+
         return redirect('accounts:home')
-
+    
+    def get_file_type(self, filename):
+        extension = filename.split('.')[-1].lower()
+        if extension in ['jpg', 'jpeg', 'png', 'gif']:
+            return 'image'
+        elif extension in ['mp4', 'avi', 'mov']:
+            return 'video'
+        elif extension in ['mp3', 'wav']:
+            return 'audio'
+        else:
+            return 'unknown'
     
 class LandingPageView(TemplateView):
     template_name = 'accounts/landing_page.html'
-    
     
 
 
@@ -260,7 +312,11 @@ class ProfileView(LoginRequiredMixin, DetailView):
         # Fetch and paginate posts
         posts = Post.objects.filter(user=viewed_user).order_by('-created_at')
         context['posts'] = posts 
-
+        tag_settings, created = UserTagSettings.objects.get_or_create(user=viewed_user)
+        if tag_settings.show_tagged_posts:
+            tagged_posts = viewed_user.tagged_posts.all().order_by('-created_at')
+            context['tagged_posts'] = tagged_posts
+            print(tagged_posts)
 
         # Add mutual friends to the context
         context['mutual_friends'] = mutual_friends
@@ -343,7 +399,35 @@ class LogoutDeviceView(APIView):
             return Response({"success": True}, status=status.HTTP_200_OK)
         return Response({"error": "Device not found"}, status=status.HTTP_404_NOT_FOUND)
     
+class UserSettingsView(LoginRequiredMixin, UpdateView):
+    model = User
+    template_name = 'accounts/user_settings.html'
+    fields = ['first_name', 'last_name', 'email', 'bio', 'profile_pic', 'cover_photo']
+    success_url = reverse_lazy('accounts:user_settings')
 
+    def get_object(self, queryset=None):
+        return self.request.user
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        tag_settings, created = UserTagSettings.objects.get_or_create(user=self.request.user)
+        context['tag_settings'] = tag_settings
+        return context
+
+    def form_valid(self, form):
+        user = form.save(commit=False)
+        user.is_private = self.request.POST.get('is_private') == 'on'
+        user.show_email = self.request.POST.get('show_email') == 'on'
+        user.show_full_name = self.request.POST.get('show_full_name') == 'on'
+        user.save()
+
+        tag_settings, created = UserTagSettings.objects.get_or_create(user=user)
+        tag_settings.allow_tagging = self.request.POST.get('allow_tagging') == 'on'
+        tag_settings.show_tagged_posts = self.request.POST.get('show_tagged_posts') == 'on'
+        tag_settings.save()
+
+        messages.success(self.request, 'Your settings have been updated successfully.')
+        return super().form_valid(form)
 
 def notifications_view(request):
     user = request.user

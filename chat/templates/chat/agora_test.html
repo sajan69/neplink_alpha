@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agora Video Call Test</title>
+    <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.17.0.js"></script>
+    <style>
+        #videos {
+            display: flex;
+            flex-wrap: wrap;
+        }
+        .video-container {
+            width: 320px;
+            height: 240px;
+            margin: 5px;
+            background-color: #f0f0f0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Agora Video Call Test</h1>
+    <button id="joinBtn">Join Call</button>
+    <button id="leaveBtn" disabled>Leave Call</button>
+    <div id="videos">
+        <div id="localVideo" class="video-container"></div>
+    </div>
+
+    <script>
+        const appId = "8b4811abd0004787a2c2ff4348868101"; // Replace with your Agora App ID
+        const channel = "test-channel";
+        const token = null; // Use null for testing. In production, you should use a token server.
+
+        let client;
+        let localAudioTrack;
+        let localVideoTrack;
+
+        const joinBtn = document.getElementById("joinBtn");
+        const leaveBtn = document.getElementById("leaveBtn");
+
+        async function initializeAgora() {
+            client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+
+            client.on("user-published", async (user, mediaType) => {
+                await client.subscribe(user, mediaType);
+                if (mediaType === "video") {
+                    const remoteVideoContainer = document.createElement("div");
+                    remoteVideoContainer.id = user.uid;
+                    remoteVideoContainer.className = "video-container";
+                    document.getElementById("videos").appendChild(remoteVideoContainer);
+                    user.videoTrack.play(remoteVideoContainer);
+                }
+                if (mediaType === "audio") {
+                    user.audioTrack.play();
+                }
+            });
+
+            client.on("user-unpublished", (user, mediaType) => {
+                if (mediaType === "video") {
+                    const remoteVideoContainer = document.getElementById(user.uid);
+                    if (remoteVideoContainer) {
+                        remoteVideoContainer.remove();
+                    }
+                }
+            });
+        }
+
+        async function joinCall() {
+            try {
+                await client.join(appId, channel, token, null);
+                localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+                localVideoTrack = await AgoraRTC.createCameraVideoTrack();
+                await client.publish([localAudioTrack, localVideoTrack]);
+                localVideoTrack.play("localVideo");
+                console.log("Joined call successfully");
+                joinBtn.disabled = true;
+                leaveBtn.disabled = false;
+            } catch (error) {
+                console.error("Error joining call:", error);
+            }
+        }
+
+        async function leaveCall() {
+            localAudioTrack.close();
+            localVideoTrack.close();
+            await client.leave();
+            document.getElementById("localVideo").innerHTML = "";
+            console.log("Left call successfully");
+            joinBtn.disabled = false;
+            leaveBtn.disabled = true;
+        }
+
+        joinBtn.onclick = joinCall;
+        leaveBtn.onclick = leaveCall;
+
+        initializeAgora();
+    </script>
+</body>
+</html>

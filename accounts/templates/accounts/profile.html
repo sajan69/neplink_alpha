@@ -28,6 +28,17 @@
                                 <button class="btn btn-primary ms-auto" data-bs-toggle="modal" data-bs-target="#editProfileModal">
                                     <i class="fas fa-edit"></i> Edit Profile
                                 </button>
+                                <div class="dropdown">
+                                    <button class="btn btn-link text-dark" type="button"  data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end" >
+                                      
+                                       <li><a class="dropdown-item" href="{% url 'post:hidden_posts' %}">Hidden Posts</a></li>
+                                       <li><a class="dropdown-item" href="{% url 'accounts:user_settings' %}">Settings</a></li>
+                                       <li><a class="dropdown-item" href="{% url 'accounts:logout' %}">Logout</a></li>
+                                    </ul>
+                                 </div>
                             {% else %}
                                 <div class="ms-auto">
                                     {% if action == 'chat' %}
@@ -64,6 +75,11 @@
                         <li class="nav-item" role="presentation">
                             <button class="nav-link active" id="posts-tab" data-bs-toggle="tab" data-bs-target="#posts" type="button" role="tab" aria-controls="posts" aria-selected="true">Posts</button>
                         </li>
+                        {% if tagged_posts %}
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="tagged-posts-tab" data-bs-toggle="tab" data-bs-target="#tagged-posts" type="button" role="tab" aria-controls="tagged-posts" aria-selected="false">Tagged Posts</button>
+                        </li>
+                        {% endif %}
                         <li class="nav-item" role="presentation">
                             <button class="nav-link" id="friends-tab" data-bs-toggle="tab" data-bs-target="#friends" type="button" role="tab" aria-controls="friends" aria-selected="false">Friends</button>
                         </li>
@@ -80,7 +96,19 @@
                                 {% endfor %}
                             </div>
                         </div>
-                        
+                        <!-- Tagged Posts Tab -->
+                        {% if tagged_posts %}
+                        <div class="tab-pane fade" id="tagged-posts" role="tabpanel" aria-labelledby="tagged-posts-tab">
+                            <div class="p-4">
+                                <h3>Tagged Posts</h3>
+                                {% for post in tagged_posts %}
+                                    {% include 'post/post_card.html' with post=post %}
+                                {% empty %}
+                                    <p>No tagged posts.</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
                         <!-- Friends Tab -->
                         <div class="tab-pane fade" id="friends" role="tabpanel" aria-labelledby="friends-tab">
                             <div class="p-4">

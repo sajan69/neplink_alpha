@@ -1,0 +1,13 @@
+{% extends 'left_column.html' %}
+{% load static %}
+
+{% block nav_content %}
+<div class="container mt-4">
+    <h2>Hidden Posts</h2>
+    {% for post in posts %}
+        {% include 'post/post_card.html' with post=post %}
+    {% empty %}
+        <p>No hidden posts.</p>
+    {% endfor %}
+</div>
+{% endblock %}

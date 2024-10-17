@@ -1,0 +1,250 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static jazzmin %}
+{% get_jazzmin_ui_tweaks as jazzmin_ui %}
+
+{% block extrahead %}
+{{ block.super }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/moment"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment"></script>
+<style>
+    .dashboard-card {
+        border-radius: 15px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+    }
+    .dashboard-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    }
+    .card-header {
+        border-top-left-radius: 15px;
+        border-top-right-radius: 15px;
+        background-color: #f8f9fa;
+    }
+    .stat-card {
+        text-align: center;
+        padding: 20px;
+    }
+    .stat-card h2 {
+        font-size: 2.5rem;
+        margin-bottom: 0;
+    }
+    .stat-card p {
+        font-size: 1.1rem;
+        color: #6c757d;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card dashboard-card stat-card">
+                <h2>{{ total_users }}</h2>
+                <p>Total Users</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card dashboard-card stat-card">
+                <h2>{{ total_posts }}</h2>
+                <p>Total Posts</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card dashboard-card stat-card">
+                <h2>{{ total_likes }}</h2>
+                <p>Total Likes</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card dashboard-card stat-card">
+                <h2>{{ total_comments }}</h2>
+                <p>Total Comments</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card dashboard-card">
+                <div class="card-header">
+                    <h3 class="card-title">User Growth</h3>
+                </div>
+                <div class="card-body">
+                    <canvas id="userGrowthChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card dashboard-card">
+                <div class="card-header">
+                    <h3 class="card-title">Post Activity</h3>
+                </div>
+                <div class="card-body">
+                    <canvas id="postActivityChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card dashboard-card">
+                <div class="card-header">
+                    <h3 class="card-title">Engagement Breakdown</h3>
+                </div>
+                <div class="card-body">
+                    <canvas id="engagementChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card dashboard-card">
+                <div class="card-header">
+                    <h3 class="card-title">User Activity Distribution</h3>
+                </div>
+                <div class="card-body">
+                    <canvas id="userActivityChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card dashboard-card">
+                <div class="card-header">
+                    <h3 class="card-title">Most Active Users</h3>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group">
+                        {% for user in most_active_users %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ user.username }}
+                            <span class="badge bg-primary rounded-pill">Score: {{ user.activity_score }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card dashboard-card">
+                <div class="card-header">
+                    <h3 class="card-title">Most Popular Posts</h3>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group">
+                        {% for post in popular_posts %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ post.caption|truncatechars:50 }}
+                            <span class="badge bg-success rounded-pill">Engagement: {{ post.engagement_score }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// User Growth Chart
+var userGrowthCtx = document.getElementById('userGrowthChart').getContext('2d');
+var userGrowthChart = new Chart(userGrowthCtx, {
+    type: 'line',
+    data: {
+        labels: {{ user_growth_labels|safe }},
+        datasets: [{
+            label: 'New Users',
+            data: {{ user_growth_data }},
+            borderColor: 'rgba(75, 192, 192, 1)',
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            tension: 0.1
+        }]
+    },
+    options: {
+        responsive: true,
+        scales: {
+            x: {
+                type: 'time',
+                time: {
+                    unit: 'day'
+                }
+            },
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+
+// Post Activity Chart
+var postActivityCtx = document.getElementById('postActivityChart').getContext('2d');
+var postActivityChart = new Chart(postActivityCtx, {
+    type: 'bar',
+    data: {
+        labels: {{ post_activity_labels|safe }},
+        datasets: [{
+            label: 'Posts',
+            data: {{ post_activity_data }},
+            backgroundColor: 'rgba(54, 162, 235, 0.6)'
+        }]
+    },
+    options: {
+        responsive: true,
+        scales: {
+            x: {
+                type: 'time',
+                time: {
+                    unit: 'day'
+                }
+            },
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+
+// Engagement Chart
+var engagementCtx = document.getElementById('engagementChart').getContext('2d');
+var engagementChart = new Chart(engagementCtx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Likes', 'Comments', 'Shares'],
+        datasets: [{
+            data: [{{ total_likes }}, {{ total_comments }}, {{ total_shares }}],
+            backgroundColor: ['rgba(255, 99, 132, 0.6)', 'rgba(54, 162, 235, 0.6)', 'rgba(255, 206, 86, 0.6)']
+        }]
+    },
+    options: {
+        responsive: true
+    }
+});
+
+// User Activity Distribution Chart
+var userActivityCtx = document.getElementById('userActivityChart').getContext('2d');
+var userActivityChart = new Chart(userActivityCtx, {
+    type: 'polarArea',
+    data: {
+        labels: ['Very Active', 'Active', 'Moderate', 'Low', 'Inactive'],
+        datasets: [{
+            data: {{ user_activity_distribution }},
+            backgroundColor: [
+                'rgba(255, 99, 132, 0.6)',
+                'rgba(54, 162, 235, 0.6)',
+                'rgba(255, 206, 86, 0.6)',
+                'rgba(75, 192, 192, 0.6)',
+                'rgba(153, 102, 255, 0.6)'
+            ]
+        }]
+    },
+    options: {
+        responsive: true
+    }
+});
+</script>
+{% endblock %}

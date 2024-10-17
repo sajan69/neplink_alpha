@@ -135,44 +135,13 @@
 
 </head>
 <body style="background-color: #EEFAFF;">
-    {% comment %} <nav class="navbar navbar-expand-lg navbar-light bg-light">
-        <div class="container">
-            <a class="navbar-brand" href="/">NepLink-Alpha</a>
-            <div class="collapse navbar-collapse">
-                <ul class="navbar-nav ms-auto">
-                    {% if user.is_authenticated %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'accounts:home' %}">Home</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'accounts:password_change' %}">Change Password</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'accounts:logout' %}">Logout</a>
-                        </li>
-                    {% else %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'accounts:login' %}">Login</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'accounts:register' %}">Register</a>
-                        </li>
-                    {% endif %}
-                </ul>
-            </div>
-        </div>
-    </nav> {% endcomment %}
-
     <div class="container mt-4">
         {% block content %}
         {% endblock %}
     </div>
-
-    {% comment %} sweetalert cdn     {% endcomment %}
     <script src="
     https://cdn.jsdelivr.net/npm/sweetalert2@11.14.1/dist/sweetalert2.all.min.js
     "></script>
-    
         <script>
         {% if messages %}
             {% for message in messages %}
@@ -183,10 +152,7 @@
                 });
             {% endfor %}
         {% endif %}
-        
-     
-    </script>
-    
+    </script>  
 </body>
 </html>
 

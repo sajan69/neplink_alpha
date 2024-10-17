@@ -75,7 +75,6 @@ def chat_room(request, room_id):
     if not room.participants.filter(id=request.user.id).exists():
         messages.error(request, "You don't have access to this chat room.")
         return redirect('chat:chat_list')
-    print(messages_info)
     active_call = room.call_logs.filter(status='ongoing').first()
     
     return render(request, 'chat/room.html', {
@@ -106,127 +105,67 @@ def upload_file(request):
         print(f'File uploaded: {message.file.url}')
         return JsonResponse({'file_url': message.file.url})
 
-from agora_token_builder.RtcTokenBuilder import Role_Publisher
-from agora_token_builder import RtcTokenBuilder
-from django.conf import settings
-import time
-from asgiref.sync import async_to_sync
-from channels.layers import get_channel_layer
-from .agora import APP_ID, generate_agora_token
 from django.views.decorators.http import require_POST
-
-@csrf_exempt
+from django.contrib.auth.decorators import login_required
+from .models import ChatRoom, CallLog
+from agora_token_builder import RtcTokenBuilder
+import random
+import time
+import json
+from decouple import config
+# ... (keep your existing imports and views)
 
 @login_required
+@require_POST
 def initiate_call(request):
-    try:
-        data = json.loads(request.body)
-        room_id = data.get('room_id')
-        call_type = data.get('call_type')
-    except json.JSONDecodeError:
-        return JsonResponse({'error': 'Invalid JSON'}, status=400)
-
-    if not room_id or not call_type:
-        return JsonResponse({'error': 'Missing parameters'}, status=400)
-
-    try:
-        room = ChatRoom.objects.get(id=room_id)
-    except ChatRoom.DoesNotExist:
-        return JsonResponse({'error': 'Chat Room not found'}, status=404)
-
-    # Check if there's an ongoing call
-    ongoing_call = room.call_logs.filter(status='ongoing').first()
+    data = json.loads(request.body)
+    room_id = data.get('room_id')
+    call_type = data.get('call_type')
+    
+    room = ChatRoom.objects.get(id=room_id)
+    
+    # Check if there's an ongoing call in the room
+    ongoing_call = CallLog.objects.filter(room=room, status='ongoing').first()
     if ongoing_call:
-        return JsonResponse({
-            'status': 'Call already ongoing',
-            'call_log_id': ongoing_call.id,
-            'agora_channel': ongoing_call.agora_channel,
-            'call_type': ongoing_call.call_type
-        })
-
+        return JsonResponse({'status': 'Call already ongoing', 'call_log_id': ongoing_call.id})
+    
     # Create a new call log
-    agora_channel = f'room_{room_id}_{int(datetime.now(timezone.utc).timestamp())}'
     call_log = CallLog.objects.create(
         room=room,
         caller=request.user,
-        agora_channel=agora_channel,
         call_type=call_type,
+        agora_channel=f"room_{room_id}"
     )
     call_log.participants.add(request.user)
-
-    return JsonResponse({
-        'status': 'Call initiated',
-        'call_log_id': call_log.id,
-        'agora_channel': call_log.agora_channel,
-        'call_type': call_type
-    })
-
-@csrf_exempt
+    
+    # Update the room's active call
+    room.active_call = call_log
+    room.save()
+    
+    return JsonResponse({'status': 'Call initiated', 'call_log_id': call_log.id, 'call_type': call_type})
 
 @login_required
-def end_call(request):
-    try:
-        data = json.loads(request.body)
-        call_log_id = data.get('call_log_id')
-    except json.JSONDecodeError:
-        return JsonResponse({'error': 'Invalid JSON'}, status=400)
-
-    if not call_log_id:
-        return JsonResponse({'error': 'Missing call_log_id'}, status=400)
-
-    try:
-        call_log = CallLog.objects.get(id=call_log_id)
-    except CallLog.DoesNotExist:
-        return JsonResponse({'error': 'Invalid Call Log'}, status=400)
-
-    if call_log.status == 'ended':
-        return JsonResponse({'error': 'Call already ended'}, status=400)
-
-    # Mark the call log as ended
-    call_log.end_call()
-
-    return JsonResponse({'status': 'Call ended'})
-
-@csrf_exempt
 @require_POST
-@login_required
-def join_call(request):
-    try:
-        data = json.loads(request.body)
-        call_log_id = data.get('call_log_id')
-    except json.JSONDecodeError:
-        return JsonResponse({'error': 'Invalid JSON'}, status=400)
-
-    if not call_log_id:
-        return JsonResponse({'error': 'Missing call_log_id'}, status=400)
-
-    try:
-        call_log = CallLog.objects.get(id=call_log_id)
-    except CallLog.DoesNotExist:
-        return JsonResponse({'error': 'Invalid Call Log'}, status=400)
-
-    if call_log.status != 'ongoing':
-        return JsonResponse({'error': 'Call is not ongoing'}, status=400)
-
-    # Add the user to the call participants
-    call_log.participants.add(request.user)
-
-    return JsonResponse({
-        'status': 'Joined call',
-        'agora_channel': call_log.agora_channel,
-        'call_type': call_log.call_type
-    })
+def end_call(request):
+    data = json.loads(request.body)
+    call_log_id = data.get('call_log_id')
+    
+    call_log = CallLog.objects.get(id=call_log_id)
+    call_log.end_call()
+    
+    return JsonResponse({'status': 'Call ended'})
 
 @login_required
 def get_agora_token(request):
-    """
-    API endpoint to get Agora token for a specific call channel and user.
-    """
-    channel_name = request.GET.get('channel')
-    uid = request.GET.get('uid')
+    app_id = config('AGORA_APP_ID')
+    app_certificate = config('AGORA_APP_CERTIFICATE')
+    channel = request.GET.get('channel')
+    uid = random.randint(1, 230)
+    expiration_time_in_seconds = 3600
+    current_timestamp = int(time.time())
+    privilegeExpiredTs = current_timestamp + expiration_time_in_seconds
+    role = 1  # 1 for host, 2 for guest
 
-    if not channel_name or not uid:
-        return JsonResponse({'error': 'Missing parameters'}, status=400)
-    
-    token = generate_agora_token(channel_name, uid, Role_Publisher)
-    return JsonResponse({'token': token, 'channel_name': channel_name, 'app_id': APP_ID})
+    token = RtcTokenBuilder.buildTokenWithUid(app_id, app_certificate, channel, uid, role, privilegeExpiredTs)
+
+    return JsonResponse({'token': token, 'uid': uid, 'app_id': app_id})

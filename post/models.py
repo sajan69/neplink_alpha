@@ -13,16 +13,50 @@ class Post(models.Model):
         EXCITED = 'excited', 'Excited'
         CALM = 'calm', 'Calm'
         NONE = 'none', 'None'
+
+    class Visibility(models.TextChoices):
+        EVERYONE = 'everyone', 'Everyone'
+        FRIENDS = 'friends', 'Friends'
+        PRIVATE = 'private', 'Private'
+        SELECTED = 'selected', 'Selected Friends'
         
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='posts')
     caption = models.TextField(blank=True)
-    media = models.FileField(upload_to='post_media/', blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     feeling = models.CharField(max_length=50, choices=Feeling.choices, default=Feeling.HAPPY)
+    is_hidden = models.BooleanField(default=False)
+    visibility = models.CharField(max_length=50, choices=Visibility.choices, default=Visibility.EVERYONE)
+    shared_post = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='shares')
+    is_shared = models.BooleanField(default=False)
+    tagged_users = models.ManyToManyField(User, related_name='tagged_posts', blank=True)
 
     def __str__(self):
         return f"Post by {self.user.username} - {self.created_at}"
+    
+class PostMedia(models.Model):
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='media')
+    file = models.FileField(upload_to='post_media/')
+    file_type = models.CharField(max_length=10, choices=[('image', 'Image'), ('video', 'Video'), ('audio', 'Audio')])
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.file_type} for post {self.post.id}"
+    
+class SelectedFriend(models.Model):
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='selected_friends')
+    friend = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = ['post', 'friend']   
+
+class UserTagSettings(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='tag_settings')
+    allow_tagging = models.BooleanField(default=True)
+    show_tagged_posts = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"Tag settings for {self.user.username}"
 
 class Like(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)

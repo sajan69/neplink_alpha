@@ -1,0 +1,168 @@
+{% extends 'left_column.html' %}
+{% load static %}
+
+{% block nav_content %}
+<div class="container my-5">
+  <h1 class="mb-4 text-primary">User Settings</h1>
+  <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+    {% csrf_token %}
+    <div class="row g-4">
+      <div class="col-md-8">
+        <div class="card shadow-sm mb-4">
+          <div class="card-header bg-primary text-white">
+            <h3 class="card-title mb-0">Profile Information</h3>
+          </div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label for="first_name" class="form-label">First Name</label>
+                <input type="text" class="form-control" id="first_name" name="first_name" value="{{ user.first_name }}" required>
+              </div>
+              <div class="col-md-6">
+                <label for="last_name" class="form-label">Last Name</label>
+                <input type="text" class="form-control" id="last_name" name="last_name" value="{{ user.last_name }}" required>
+              </div>
+              <div class="col-12">
+                <label for="email" class="form-label">Email</label>
+                <input type="email" class="form-control" id="email" name="email" value="{{ user.email }}" required>
+              </div>
+              <div class="col-12">
+                <label for="bio" class="form-label">Bio</label>
+                <textarea class="form-control" id="bio" name="bio" rows="3">{{ user.bio }}</textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card shadow-sm mb-4">
+          <div class="card-header bg-primary text-white">
+            <h3 class="card-title mb-0">Profile Media</h3>
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label for="profile_pic" class="form-label">Profile Picture</label>
+              <div class="input-group">
+                <input type="file" class="form-control" id="profile_pic" name="profile_pic" accept="image/*">
+                <label class="input-group-text" for="profile_pic">Upload</label>
+              </div>
+              {% if user.profile_pic %}
+              <p class="mt-2">Current Profile Picture:</p>
+                <div class="mt-2">
+                  <img src="{{ user.profile_pic.url }}" alt="Profile Picture" class="img-fluid">
+                </div>
+              {% endif %}
+            </div>
+            <div class="mb-3">
+              <label for="cover_photo" class="form-label">Cover Photo</label>
+              <div class="input-group">
+                <input type="file" class="form-control" id="cover_photo" name="cover_photo" accept="image/*">
+                <label class="input-group-text" for="cover_photo">Upload</label>
+              </div>
+              {% if user.cover_photo %}
+              <p class="mt-2">Current Cover Photo:</p>
+                <div class="mt-2">
+                  <img src="{{ user.cover_photo.url }}" alt="Cover Photo" class="img-fluid">
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <div class="card shadow-sm mb-4">
+          <div class="card-header bg-primary text-white">
+            <h3 class="card-title mb-0">Privacy Settings</h3>
+          </div>
+          <div class="card-body">
+            <div class="form-check form-switch mb-3">
+              <input type="checkbox" class="form-check-input" id="is_private" name="is_private" {% if user.is_private %}checked{% endif %}>
+              <label class="form-check-label" for="is_private">Make profile private</label>
+            </div>
+            <div class="form-check form-switch mb-3">
+              <input type="checkbox" class="form-check-input" id="show_email" name="show_email" {% if user.show_email %}checked{% endif %}>
+              <label class="form-check-label" for="show_email">Show email on profile</label>
+            </div>
+            <div class="form-check form-switch mb-3">
+              <input type="checkbox" class="form-check-input" id="show_full_name" name="show_full_name" {% if user.show_full_name %}checked{% endif %}>
+              <label class="form-check-label" for="show_full_name">Show full name on profile</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="card shadow-sm mb-4">
+          <div class="card-header bg-primary text-white">
+            <h3 class="card-title mb-0">Tag Settings</h3>
+          </div>
+          <div class="card-body">
+            <div class="form-check form-switch mb-3">
+              <input type="checkbox" class="form-check-input" id="allow_tagging" name="allow_tagging" {% if tag_settings.allow_tagging %}checked{% endif %}>
+              <label class="form-check-label" for="allow_tagging">Allow others to tag me in posts</label>
+            </div>
+            <div class="form-check form-switch mb-3">
+              <input type="checkbox" class="form-check-input" id="show_tagged_posts" name="show_tagged_posts" {% if tag_settings.show_tagged_posts %}checked{% endif %}>
+              <label class="form-check-label" for="show_tagged_posts">Show tagged posts on my profile</label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="d-grid gap-2 col-md-6 mx-auto mt-4">
+      <button type="submit" class="btn btn-primary btn-lg">Save Settings</button>
+    </div>
+  </form>
+</div>
+
+<style>
+  .card {
+    border: none;
+    border-radius: 15px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+  }
+  .card:hover {
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+  }
+  .card-header {
+    border-bottom: none;
+    padding: 20px;
+  }
+  .card-body {
+    padding: 30px;
+  }
+  .form-control, .form-check-input {
+    border-color: #e0e0e0;
+  }
+  .form-control:focus, .form-check-input:focus {
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+  }
+  .btn-primary {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+    transition: all 0.3s ease;
+  }
+  .btn-primary:hover {
+    background-color: #0b5ed7;
+    border-color: #0b5ed7;
+  }
+  .form-control, .form-select {
+    width: 100%;
+    padding: 0.375rem 0.75rem;
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.5;
+    color: #212529;
+    background-color: #fff;
+    background-clip: padding-box;
+    border: 1px solid #ced4da;
+    border-radius: 0.25rem;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+  }
+  .form-control:focus, .form-select:focus {
+    border-color: #86b7fe;
+    outline: 0;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+  }
+</style>
+{% endblock %}

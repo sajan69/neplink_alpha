@@ -33,6 +33,7 @@ ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*').split(',')  # Split if ther
 
 DEFAULT_APPS = [
     # Django default apps
+    'jazzmin',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -104,6 +105,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'accounts.context_processors.global_context', 
+                'post.dashboard.admin_dashboard', 
             ],
         },
     },
@@ -218,4 +220,90 @@ SOCIALACCOUNT_PROVIDERS = {
         }
     }
 }
- 
+
+
+JAZZMIN_SETTINGS = {
+    "site_title": "NepLink Admin",
+    "site_header": "NepLink",
+    "site_brand": "NepLink",
+    "site_logo": "img/logo.png",
+    "site_icon": "img/favicon.ico",
+    "welcome_sign": "Welcome to the NepLink Admin Portal",
+    "copyright": "NepLink Ltd",
+    "search_model": ["accounts.User", "post.Post"],
+    "user_avatar": None,
+    "topmenu_links": [
+        {"name": "Home", "url": "admin:index", "permissions": ["auth.view_user"]},
+        {"name": "Support", "url": "https://github.com/sajan69/neplink_alpha/issues", "new_window": True},
+        {"model": "accounts.User"},
+        {"app": "post"},
+    ],
+    "usermenu_links": [
+        {"name": "Support", "url": "https://github.com/sajan69/neplink_alpha/issues", "new_window": True},
+        {"model": "accounts.User"}
+    ],
+    "show_sidebar": True,
+    "navigation_expanded": True,
+    "hide_apps": [],
+    "hide_models": [],
+    "order_with_respect_to": ["auth", "post", "post.Post", "post.Comment", "post.CommentReply"],
+   
+    "icons": {
+        "auth": "fas fa-users-cog",
+        "accounts.User": "fas fa-user",
+        "accounts.Notification": "fas fa-bell",
+        "auth.Group": "fas fa-users",
+        "post.Post": "fas fa-file-alt",
+        "post.Comment": "fas fa-comments",
+        "post.CommentReply": "fas fa-reply",
+        "post.Like": "fas fa-heart",
+        "post.UserTagSettings": "fas fa-tags",
+        "friends.Friendship": "fas fa-user-friends",
+        "friends.FriendRequest": "fas fa-paper-plane",
+        "chat.Message": "fas fa-envelope",
+        "chat.ChatRoom": "fas fa-comments",
+        "chat.CallLog": "fas fa-phone",
+
+    },
+    "default_icon_parents": "fas fa-chevron-circle-right",
+    "default_icon_children": "fas fa-circle",
+    "related_modal_active": True,
+    "custom_css": None,
+    "custom_js": None,
+    "show_ui_builder": True,
+    "changeform_format": "horizontal_tabs",
+    "changeform_format_overrides": { "auth.group": "vertical_tabs"},
+    
+
+}
+
+JAZZMIN_UI_TWEAKS = {
+    "navbar_small_text": False,
+    "footer_small_text": False,
+    "body_small_text": False,
+    "brand_small_text": False,
+    "brand_colour": "navbar-info",
+    "accent": "accent-info",
+    "no_navbar_border": False,
+    "navbar_fixed": False,
+    "layout_boxed": False,
+    "footer_fixed": False,
+    "sidebar_fixed": False,
+    "sidebar": "sidebar-dark-info",
+    "sidebar_nav_small_text": False,
+    "sidebar_disable_expand": False,
+    "sidebar_nav_child_indent": False,
+    "sidebar_nav_compact_style": False,
+    "sidebar_nav_legacy_style": False,
+    "sidebar_nav_flat_style": False,
+    "theme": "cosmo",
+    "dark_mode_theme": None,
+    "button_classes": {
+        "primary": "btn-primary",
+        "secondary": "btn-secondary",
+        "info": "btn-info",
+        "warning": "btn-warning",
+        "danger": "btn-danger",
+        "success": "btn-success"
+    }
+}

@@ -197,53 +197,246 @@
 
 <!-- Call Interface Modal -->
 <div class="modal fade" id="callModal" tabindex="-1" aria-labelledby="callModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-xl">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">{{ room.name|default:"Chat Room" }} - Call</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" onclick="leaveAgoraCall()"></button>
-      </div>
-      <div class="modal-body">
-        <div class="row">
-          <!-- Local Video -->
-          <div class="col-md-6">
-            <div id="local-video-container" class="mb-3">
-              <p>Local Video</p>
-              <div id="local-video"></div>
-            </div>
-          </div>
-          <!-- Remote Videos -->
-          <div class="col-md-6">
-            <div id="remote-video-container">
-              <p>Remote Participants</p>
-            </div>
-          </div>
+    <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="callModalLabel">{{ room.name|default:"Chat Room" }} - Call</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
-        <!-- Call Controls -->
-        <div class="d-flex justify-content-center mt-3">
-          <button id="mute-audio-btn" class="btn btn-secondary me-2">
-              <i class="fas fa-microphone-slash me-2"></i>Mute
-          </button>
-          <button id="mute-video-btn" class="btn btn-secondary me-2">
-              <i class="fas fa-video-slash me-2"></i>Stop Video
-          </button>
-          <button id="leave-call-btn" class="btn btn-danger">
-              <i class="fas fa-phone-slash me-2"></i>Leave Call
-          </button>
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-md-6">
+              <div id="local-video-container"></div>
+            </div>
+            <div class="col-md-6">
+              <div id="remote-video-container"></div>
+            </div>
+          </div>
+          <div class="mt-3 text-center">
+            <button id="mute-audio-btn" class="btn btn-primary me-2">Mute Audio</button>
+            <button id="mute-video-btn" class="btn btn-primary me-2">Mute Video</button>
+            <button id="leave-call-btn" class="btn btn-danger">Leave Call</button>
+          </div>
         </div>
       </div>
     </div>
   </div>
-</div>
-
+  
 <!-- Agora SDK Script -->
 <script src="https://cdn.agora.io/sdk/release/AgoraRTC_N.js"></script>
+<script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.17.0.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
 <script>
-   
     const roomId = {{ room.id }};
     const userId = {{ request.user.id }};
+    let currentCallLogId = null;
+    let client = null;
+    let localAudioTrack = null;
+    let localVideoTrack = null;
+    async function handleUserPublished(user, mediaType) {
+        await client.subscribe(user, mediaType);
+        if (mediaType === "video") {
+            const remoteVideoTrack = user.videoTrack;
+            const remotePlayerContainer = document.createElement("div");
+            remotePlayerContainer.id = user.uid.toString();
+            remotePlayerContainer.style.width = "100%";
+            remotePlayerContainer.style.height = "100%";
+            document.getElementById("remote-video-container").append(remotePlayerContainer);
+            remoteVideoTrack.play(remotePlayerContainer);
+        }
+        if (mediaType === "audio") {
+            user.audioTrack.play();
+        }
+    }
+    
+    function handleUserUnpublished(user) {
+        const remotePlayerContainer = document.getElementById(user.uid.toString());
+        if (remotePlayerContainer) {
+            remotePlayerContainer.remove();
+        }
+    }
+    // Initialize Agora
+    async function initializeAgora(appId, token, channel, uid, callType) {
+        try {
+            client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+    
+            client.on("user-published", handleUserPublished);
+            client.on("user-unpublished", handleUserUnpublished);
+    
+            await client.join(appId, channel, token, uid);
+            console.log("Joined Agora channel:", channel);
+    
+            if (callType === 'video') {
+                try {
+                    localTracks.videoTrack = await AgoraRTC.createCameraVideoTrack();
+                    localTracks.audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+                    localTracks.videoTrack.play("local-video-container");
+                } catch (error) {
+                    console.error("Error creating video track:", error);
+                    alert("Failed to access camera. Please check your camera permissions and try again.");
+                    await endCall();
+                    return;
+                }
+            } else {
+                try {
+                    localTracks.audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+                } catch (error) {
+                    console.error("Error creating audio track:", error);
+                    alert("Failed to access microphone. Please check your microphone permissions and try again.");
+                    await endCall();
+                    return;
+                }
+            }
+    
+            await client.publish(Object.values(localTracks));
+            console.log("Published local tracks");
+    
+            // Show the call modal
+            callModal.show();
+        } catch (error) {
+            console.error("Agora initialization error:", error);
+            alert("Failed to join the call. Please try again later.");
+            await endCall();
+        }
+    }
+async function checkAndRequestPermissions(callType) {
+    try {
+        if (callType === 'video') {
+            await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        } else {
+            await navigator.mediaDevices.getUserMedia({ audio: true });
+        }
+        return true;
+    } catch (error) {
+        console.error("Error requesting permissions:", error);
+        if (error.name === 'NotAllowedError') {
+            alert("Please grant permission to use your camera and/or microphone to make calls.");
+        } else {
+            alert("An error occurred while accessing your media devices. Please check your settings and try again.");
+        }
+        return false;
+    }
+}
+    // Join Agora channel
+    async function joinChannel(token, channel, uid) {
+        await client.join("YOUR_AGORA_APP_ID", channel, token, uid);
+        localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+        localVideoTrack = await AgoraRTC.createCameraVideoTrack();
+        await client.publish([localAudioTrack, localVideoTrack]);
+        
+        const localPlayerContainer = document.createElement("div");
+        localPlayerContainer.id = uid.toString();
+        localPlayerContainer.style.width = "100%";
+        localPlayerContainer.style.height = "100%";
+        document.getElementById("local-video-container").append(localPlayerContainer);
+        localVideoTrack.play(localPlayerContainer);
+    }
+
+    // Initiate call
+    async function initiateCall(callType) {
+        if (!(await checkAndRequestPermissions(callType))) {
+            return;
+        }
+    
+        const response = await fetch('/chat/initiate_call/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({ room_id: roomId, call_type: callType })
+        });
+        const data = await response.json();
+        
+        if (data.status === 'Call initiated') {
+            currentCallLogId = data.call_log_id;
+            const tokenResponse = await fetch(`/chat/get_agora_token/?channel=room_${roomId}`);
+            const tokenData = await tokenResponse.json();
+            
+            await initializeAgora(tokenData.app_id, tokenData.token, `room_${roomId}`, tokenData.uid, callType);
+        } else {
+            alert('A call is already in progress in this room.');
+        }
+    }
+
+    // End call
+    async function endCall() {
+        if (client) {
+            try {
+                await client.leave();
+                console.log("Left the Agora channel");
+            } catch (error) {
+                console.error("Error leaving Agora channel:", error);
+            }
+        }
+    
+        // Close local tracks
+        for (let trackName in localTracks) {
+            let track = localTracks[trackName];
+            if (track) {
+                track.stop();
+                track.close();
+                localTracks[trackName] = null;
+            }
+        }
+    
+        // Hide the call modal
+        callModal.hide();
+    
+        // End the call in the backend
+        if (currentCallLogId) {
+            try {
+                const response = await fetch('/chat/end_call/', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        call_log_id: currentCallLogId
+                    }),
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const data = await response.json();
+                if (data.status === 'Call ended') {
+                    console.log('Call ended successfully');
+                }
+            } catch (error) {
+                console.error('Error ending call:', error);
+            }
+        }
+    
+        currentCallLogId = null;
+        currentCallType = null;
+    }
+
+    // Event listeners
+    document.querySelector('.call-btn[data-call-type="audio"]').addEventListener('click', () => initiateCall('audio'));
+    document.querySelector('.call-btn[data-call-type="video"]').addEventListener('click', () => initiateCall('video'));
+    document.getElementById('leave-call-btn').addEventListener('click', endCall);
+    
+    document.getElementById('mute-audio-btn').addEventListener('click', () => {
+        if (localAudioTrack.muted) {
+            localAudioTrack.setMuted(false);
+            document.getElementById('mute-audio-btn').textContent = 'Mute Audio';
+        } else {
+            localAudioTrack.setMuted(true);
+            document.getElementById('mute-audio-btn').textContent = 'Unmute Audio';
+        }
+    });
+    
+    document.getElementById('mute-video-btn').addEventListener('click', () => {
+        if (localVideoTrack.muted) {
+            localVideoTrack.setMuted(false);
+            document.getElementById('mute-video-btn').textContent = 'Mute Video';
+        } else {
+            localVideoTrack.setMuted(true);
+            document.getElementById('mute-video-btn').textContent = 'Unmute Video';
+        }
+    });
+</script>
+<script>
+   
+   
     const username = "{{ request.user.username }}";
     let currentCallLogId = null;
     let currentCallType = null;
@@ -383,211 +576,7 @@
         e.target.value = '';
     };
 
-    // Call Buttons Event Listeners
-    document.querySelectorAll('.call-btn').forEach(button => {
-        button.addEventListener('click', () => {
-            const roomId = button.getAttribute('data-room-id');
-            const callType = button.getAttribute('data-call-type');
-            initiateAgoraCall(roomId, callType);
-        });
-    });
-
-    document.querySelectorAll('.join-call-btn').forEach(button => {
-        button.addEventListener('click', () => {
-            const roomId = button.getAttribute('data-room-id');
-            const callLogId = button.getAttribute('data-call-log-id');
-            const callType = button.getAttribute('data-call-type');
-            joinAgoraCall(roomId, callLogId, callType);
-        });
-    });
-
-    // Initiate Call Function
-    function initiateAgoraCall(roomId, callType) {
-        fetch('/chat/initiate_call/', {
-            method: 'POST',
-            body: JSON.stringify({
-                room_id: roomId,
-                call_type: callType
-            }),
-            headers: {
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'Call initiated') {
-                currentCallLogId = data.call_log_id;
-                currentCallType = data.call_type;
-                joinAgoraCall(roomId, currentCallLogId, currentCallType);
-            } else if (data.status === 'Call already ongoing') {
-                alert('A call is already ongoing in this room.');
-            }
-        })
-        .catch(error => {
-            console.error('Error initiating call:', error);
-        });
-    }
-
-    // Join Call Function
-    function joinAgoraCall(roomId, callLogId, callType) {
-        currentCallLogId = callLogId;
-        currentCallType = callType;
-        console.log('Joining call:', roomId, callLogId, callType);
-
-        // Fetch Agora credentials
-        fetch(`/chat/get_agora_token/?channel=room_${roomId}&uid=${userId}`)
-            .then(response => response.json())
-            .then(data => {
-                const appId = data.app_id;
-                const token = data.token;
-                const channel = `room_${roomId}`;
-
-                initializeAgora(appId, token, channel, userId, callType);
-            })
-            .catch(error => {
-                console.error('Error fetching Agora token:', error);
-            });
-    }
-
-    // Initialize Agora
-    async function initializeAgora(appId, token, channel, uid, callType) {
-        client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
-
-        client.on("user-published", handleUserPublished);
-        client.on("user-unpublished", handleUserUnpublished);
-
-        try {
-            await client.join(appId, channel, token, uid);
-            console.log("Joined Agora channel:", channel);
-
-            if (callType === 'video') {
-                localTracks.videoTrack = await AgoraRTC.createCameraVideoTrack();
-                localTracks.audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
-                localTracks.videoTrack.play("local-video");
-            } else {
-                localTracks.audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
-            }
-
-            await client.publish(Object.values(localTracks));
-            console.log("Published local tracks");
-
-            // Show the call modal
-            callModal.show();
-        } catch (error) {
-            console.error("Agora initialization error:", error);
-        }
-    }
-
-    // Handle Remote Users Publishing
-    async function handleUserPublished(user, mediaType) {
-        const id = user.uid;
-        await client.subscribe(user, mediaType);
-        console.log("Subscribed to remote user:", id);
-
-        if (mediaType === 'video') {
-            const remoteVideoContainer = document.createElement('div');
-            remoteVideoContainer.id = `remote-video-${id}`;
-            remoteVideoContainer.style.width = "100%";
-            remoteVideoContainer.style.height = "300px";
-            document.getElementById('remote-video-container').append(remoteVideoContainer);
-            user.videoTrack.play(`remote-video-${id}`);
-        }
-
-        if (mediaType === 'audio') {
-            user.audioTrack.play();
-        }
-    }
-
-    // Handle Remote Users Unpublishing
-    async function handleUserUnpublished(user) {
-        const id = user.uid;
-        if (user.videoTrack) {
-            const remoteVideoElement = document.getElementById(`remote-video-${id}`);
-            if (remoteVideoElement) {
-                user.videoTrack.stop();
-                remoteVideoElement.remove();
-            }
-        }
-
-        if (user.audioTrack) {
-            user.audioTrack.stop();
-        }
-    }
-
-    // Leave Call Function
-    async function leaveAgoraCall() {
-        if (client) {
-            await client.leave();
-            console.log("Left the Agora channel");
-        }
-
-        // Close local tracks
-        for (let trackName in localTracks) {
-            let track = localTracks[trackName];
-            if (track) {
-                track.stop();
-                track.close();
-                localTracks[trackName] = null;
-            }
-        }
-
-        // Hide the call modal
-        callModal.hide();
-
-        // End the call in the backend
-        if (currentCallLogId) {
-            fetch('/chat/end_call/', {
-                method: 'POST',
-                body: JSON.stringify({
-                    call_log_id: currentCallLogId
-                }),
-                headers: {
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'Call ended') {
-                    console.log('Call ended successfully');
-                }
-            })
-            .catch(error => {
-                console.error('Error ending call:', error);
-            });
-        }
-
-        currentCallLogId = null;
-        currentCallType = null;
-    }
-
-    // Call Control Buttons
-    document.getElementById('leave-call-btn').addEventListener('click', leaveAgoraCall);
-
-    document.getElementById('mute-audio-btn').addEventListener('click', () => {
-        if (localTracks.audioTrack) {
-            if (localTracks.audioTrack.muted) {
-                localTracks.audioTrack.setMuted(false);
-                document.getElementById('mute-audio-btn').innerHTML = '<i class="fas fa-microphone me-2"></i>Mute';
-            } else {
-                localTracks.audioTrack.setMuted(true);
-                document.getElementById('mute-audio-btn').innerHTML = '<i class="fas fa-microphone-slash me-2"></i>Unmute';
-            }
-        }
-    });
-
-    document.getElementById('mute-video-btn').addEventListener('click', () => {
-        if (localTracks.videoTrack) {
-            if (localTracks.videoTrack.muted) {
-                localTracks.videoTrack.setMuted(false);
-                document.getElementById('mute-video-btn').innerHTML = '<i class="fas fa-video me-2"></i>Stop Video';
-            } else {
-                localTracks.videoTrack.setMuted(true);
-                document.getElementById('mute-video-btn').innerHTML = '<i class="fas fa-video-slash me-2"></i>Start Video';
-            }
-        }
-    });
+   
      // Initialize Bootstrap modals
      var myModal = new bootstrap.Modal(document.getElementById('groupMembersModal'), {
         keyboard: false

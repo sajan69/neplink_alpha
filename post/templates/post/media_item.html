@@ -1,0 +1,6 @@
+<!-- post/templates/post/media_item.html -->
+{% if media.file_type == 'image' %}
+    <img src="{{ media.file.url }}" alt="Post image" class="img-fluid rounded">
+{% elif media.file_type == 'video' %}
+    <video src="{{ media.file.url }}" controls class="w-100 rounded"></video>
+{% endif %}

@@ -1,0 +1,59 @@
+{% load static %}
+
+<div class="comments-section">
+    {% for comment in post.comments.all %}
+        <div class="comment mb-3">
+            <div class="d-flex">
+                <img src="{% if comment.user.profile_pic %}{{ comment.user.profile_pic.url }}{% else %}{% static 'img/default_profile_pic.png' %}{% endif %}" 
+                     alt="{{ comment.user.username }}" 
+                     class="rounded-circle me-2" 
+                     width="32" height="32">
+                <div class="flex-grow-1">
+                    <div class="bg-light p-2 rounded">
+                        <a href="{% url 'accounts:profile' comment.user.username %}" class="text-decoration-none text-dark fw-bold">{{ comment.user.username }}</a>
+                        <p class="mb-0">{{ comment.text }}</p>
+                    </div>
+                    <div class="mt-1">
+                        <small class="text-muted">{{ comment.created_at|timesince }} ago</small>
+                        <button class="btn btn-link btn-sm p-0 ms-2" onclick="toggleReplyForm({{ comment.id }})">Reply</button>
+                    </div>
+                    <div id="reply-form-{{ comment.id }}" class="mt-2" style="display: none;">
+                        <form action="{% url 'post:add_reply' %}" method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="comment_id" value="{{ comment.id }}">
+                            <div class="input-group">
+                                <input type="text" class="form-control form-control-sm" name="reply_text" placeholder="Write a reply...">
+                                <button type="submit" class="btn btn-primary btn-sm">Reply</button>
+                            </div>
+                        </form>
+                    </div>
+                    {% for reply in comment.replies.all %}
+                        <div class="reply mt-2 ms-4">
+                            <div class="d-flex">
+                                <img src="{% if reply.user.profile_pic %}{{ reply.user.profile_pic.url }}{% else %}{% static 'img/default_profile_pic.png' %}{% endif %}" 
+                                     alt="{{ reply.user.username }}" 
+                                     class="rounded-circle me-2" 
+                                     width="24" height="24">
+                                <div class="flex-grow-1">
+                                    <div class="bg-light p-2 rounded">
+                                        <a href="{% url 'accounts:profile' reply.user.username %}" class="text-decoration-none text-dark fw-bold">{{ reply.user.username }}</a>
+                                        <p class="mb-0">{{ reply.text }}</p>
+                                    </div>
+                                    <small class="text-muted">{{ reply.created_at|timesince }} ago</small>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+    <form action="{% url 'post:add_comment' %}" method="post" class="mt-3">
+        {% csrf_token %}
+        <input type="hidden" name="post_id" value="{{ post.id }}">
+        <div class="input-group">
+            <input type="text" class="form-control" name="comment_text" placeholder="Write a comment...">
+            <button type="submit" class="btn btn-primary">Comment</button>
+        </div>
+    </form>
+</div>
