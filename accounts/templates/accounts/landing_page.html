@@ -5,9 +5,29 @@
 <div class="container mt-5">
     <div class="row">
         <div class="col-lg-8 mx-auto text-center">
-            <h1 class="display-4 mb-4">Welcome to NepLink</h1>
-            <p class="lead mb-5">Connect with friends, share moments, and explore new relationships.</p>
+            <h1 class="display-4 mb-4" id="typing-title"></h1>
+            <p class="lead mb-5" id="typing-text"></p>
         </div>
+        <script>
+            function typeWriter(text, elementId, speed) {
+                let i = 0;
+                function type() {
+                    if (i < text.length) {
+                        document.getElementById(elementId).innerHTML += text.charAt(i);
+                        i++;
+                        setTimeout(type, speed);
+                    }
+                }
+                type();
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+                typeWriter("Welcome to NepLink", "typing-title", 100);
+                setTimeout(() => {
+                    typeWriter("Connect with friends, share moments, and explore new relationships.", "typing-text", 50);
+                }, 2000);
+            });
+        </script>
     </div>
 
     {% if user.is_authenticated %}

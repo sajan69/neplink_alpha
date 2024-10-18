@@ -1,76 +1,78 @@
 <div class="modal fade" id="editPostModal-{{ post.id }}" tabindex="-1" aria-labelledby="editPostModalLabel-{{ post.id }}" aria-hidden="true">
     <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
+       <div class="modal-content">
+          <form action="{% url 'post:post_management' %}" method="post" enctype="multipart/form-data">
+             {% csrf_token %}
+             <input type="hidden" name="action" value="edit_post">
+             <input type="hidden" name="post_id" value="{{ post.id }}">
+             <div class="modal-header">
                 <h5 class="modal-title" id="editPostModalLabel-{{ post.id }}">Edit Post</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form action="{% url 'post:post_management' %}" method="post" enctype="multipart/form-data">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="edit_post">
-                <input type="hidden" name="post_id" value="{{ post.id }}">
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="caption-{{ post.id }}" class="form-label">Caption</label>
-                        <textarea class="form-control" id="caption-{{ post.id }}" name="caption" rows="3">{{ post.caption }}</textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label for="feeling-{{ post.id }}" class="form-label">Feeling</label>
-                        <select class="form-select" id="feeling-{{ post.id }}" name="feeling">
-                            <option value="">Select a feeling</option>
-                            {% for feeling in post.Feeling.choices %}
-                                <option value="{{ feeling.0 }}" {% if post.feeling == feeling.0 %}selected{% endif %}>{{ feeling.1 }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label for="visibility-{{ post.id }}" class="form-label">Visibility</label>
-                        <select class="form-select" id="visibility-{{ post.id }}" name="visibility">
-                            <option value="everyone" {% if post.visibility == 'everyone' %}selected{% endif %}>Everyone</option>
-                            <option value="friends" {% if post.visibility == 'friends' %}selected{% endif %}>Friends</option>
-                            <option value="private" {% if post.visibility == 'private' %}selected{% endif %}>Private</option>
-                            <option value="selected" {% if post.visibility == 'selected' %}selected{% endif %}>Selected Friends</option>
-                        </select>
-                    </div>
-                    <div id="selectedFriendsContainer-{{ post.id }}" style="display: {% if post.visibility == 'selected' %}block{% else %}none{% endif %};">
-                        <label class="form-label">Select Friends</label>
-                        <div class="form-check">
-                            {% for friend in user.friends.all %}
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="selected_friends" value="{{ friend.id }}" id="friend-{{ friend.id }}-{{ post.id }}"
-                                        {% if friend in post.selected_friends.all %}checked{% endif %}>
-                                    <label class="form-check-label" for="friend-{{ friend.id }}-{{ post.id }}">
-                                        {{ friend.username }}
-                                    </label>
-                                </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="files-{{ post.id }}" class="form-label">Add Media</label>
-                        <input type="file" class="form-control" id="files-{{ post.id }}" name="files" multiple>
-                    </div>
-                    <div id="filePreview-{{ post.id }}" class="mb-3">
-                        {% for media in post.media.all %}
-                            <div class="preview-item mb-2">
-                                {% if media.file_type == 'image' %}
-                                    <img src="{{ media.file.url }}" alt="Preview" style="max-width: 100px; max-height: 100px;">
-                                {% elif media.file_type == 'video' %}
-                                    <video src="{{ media.file.url }}" style="max-width: 100px; max-height: 100px;"></video>
-                                {% else %}
-                                    <i class="fas fa-file"></i>
-                                {% endif %}
-                                <span>{{ media.file.name }}</span>
-                                <button type="button" class="btn btn-sm btn-danger remove-file" data-media-id="{{ media.id }}">Remove</button>
-                            </div>
-                        {% endfor %}
-                    </div>
+             </div>
+             <div class="modal-body">
+                <div class="mb-3">
+                   <label for="caption-{{ post.id }}" class="form-label">Caption</label>
+                   <textarea class="form-control" id="caption-{{ post.id }}" name="caption" rows="3">{{ post.caption }}</textarea>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="submit" class="btn btn-primary">Save changes</button>
+                <div class="mb-3">
+                   <label for="feeling-{{ post.id }}" class="form-label">Feeling</label>
+                   <select class="form-select" id="feeling-{{ post.id }}" name="feeling">
+                      <option value="">How are you feeling?</option>
+                      <option value="happy" {% if post.feeling == 'happy' %}selected{% endif %}>Happy</option>
+                      <option value="sad" {% if post.feeling == 'sad' %}selected{% endif %}>Sad</option>
+                      <option value="excited" {% if post.feeling == 'excited' %}selected{% endif %}>Excited</option>
+                      <option value="angry" {% if post.feeling == 'angry' %}selected{% endif %}>Angry</option>
+                      <option value="thankful" {% if post.feeling == 'thankful' %}selected{% endif %}>Thankful</option>
+                      <option value="confused" {% if post.feeling == 'confused' %}selected{% endif %}>Confused</option>
+                      <option value="surprised" {% if post.feeling == 'surprised' %}selected{% endif %}>Surprised</option>
+                      <option value="love" {% if post.feeling == 'love' %}selected{% endif %}>Love</option>
+                      <option value="calm" {% if post.feeling == 'calm' %}selected{% endif %}>Calm</option>
+                      
+ 
+                   </select>
                 </div>
-            </form>
-        </div>
+                <div class="mb-3">
+                   <label for="visibility-{{ post.id }}" class="form-label">Visibility</label>
+                   <select class="form-select" id="visibility-{{ post.id }}" name="visibility">
+                      <option value="everyone" {% if post.visibility == 'everyone' %}selected{% endif %}>Everyone</option>
+                      <option value="friends" {% if post.visibility == 'friends' %}selected{% endif %}>Friends</option>
+                      <option value="private" {% if post.visibility == 'private' %}selected{% endif %}>Private</option>
+                      <option value="selected" {% if post.visibility == 'selected' %}selected{% endif %}>Selected Friends</option>
+                   </select>
+                </div>
+                <div id="selectedFriendsContainer-{{ post.id }}" class="mb-3" {% if post.visibility != 'selected' %}style="display: none;"{% endif %}>
+                   <label for="selected_friends-{{ post.id }}" class="form-label">Selected Friends</label>
+                   <select class="form-select" id="selected_friends-{{ post.id }}" name="selected_friends" multiple>
+                      {% for friendship in friends %}
+                      <option value="{{ friendship.friend.id }}" {% if friendship.friend in post.selected_friends.all %}selected{% endif %}>{{ friendship.friend.username }}</option>
+                      {% endfor %}
+                   </select>
+                </div>
+                <div class="mb-3">
+                   <label for="files-{{ post.id }}" class="form-label">Media</label>
+                   <input type="file" class="form-control" id="files-{{ post.id }}" name="files" multiple>
+                   <div id="filePreview-{{ post.id }}" class="mt-2">
+                      {% for media in post.media.all %}
+                      <div class="preview-item mb-2">
+                         {% if media.file_type == 'image' %}
+                         <img src="{{ media.file.url }}" alt="Post image" style="max-width: 100px; max-height: 100px;">
+                         {% elif media.file_type == 'video' %}
+                         <video src="{{ media.file.url }}" style="max-width: 100px; max-height: 100px;"></video>
+                         {% elif media.file_type == 'audio' %}
+                         <audio src="{{ media.file.url }}" controls></audio>
+                         {% endif %}
+                         <span>{{ media.file.name }}</span>
+                         <button type="button" class="btn btn-sm btn-danger remove-file" data-media-id="{{ media.id }}">Remove</button>
+                      </div>
+                      {% endfor %}
+                   </div>
+                </div>
+             </div>
+             <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="submit" class="btn btn-primary">Save changes</button>
+             </div>
+          </form>
+       </div>
     </div>
-</div>
+ </div>

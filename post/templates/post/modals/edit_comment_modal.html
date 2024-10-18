@@ -1,0 +1,28 @@
+{% for comment in post.comments.all %}
+<div class="modal fade" id="editCommentModal-{{ comment.id }}" tabindex="-1" aria-labelledby="editCommentModalLabel-{{ comment.id }}" aria-hidden="true">
+   <div class="modal-dialog">
+      <div class="modal-content">
+         <form action="{% url 'post:post_management' %}" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="edit_comment">
+            <input type="hidden" name="post_id" value="{{ post.id }}">
+            <input type="hidden" name="comment_id" value="{{ comment.id }}">
+            <div class="modal-header">
+               <h5 class="modal-title" id="editCommentModalLabel-{{ comment.id }}">Edit Comment</h5>
+               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+               <div class="mb-3">
+                  <label for="comment-text-{{ comment.id }}" class="form-label">Comment</label>
+                  <textarea class="form-control" id="comment-text-{{ comment.id }}" name="text" rows="3">{{ comment.text }}</textarea>
+               </div>
+            </div>
+            <div class="modal-footer">
+               <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+               <button type="submit" class="btn btn-primary">Save changes</button>
+            </div>
+         </form>
+      </div>
+   </div>
+</div>
+{% endfor %}

@@ -2,65 +2,136 @@
 {% load static %}
 {% load file_seperator %}
 {% block nav_content %}
+<style>
+    .custom-card {
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+    
+    .custom-header {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #e9ecef;
+        font-weight: bold;
+        padding: 15px 20px;
+    }
+    
+    .custom-list-item {
+        padding: 15px 20px;
+        transition: background-color 0.3s ease;
+    }
+    
+    .custom-list-item:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .user-info {
+        display: flex;
+        align-items: center;
+    }
+    
+    .username {
+        font-weight: 500;
+        margin-left: 10px;
+    }
+    
+    .custom-btn {
+        border-radius: 20px;
+        padding: 5px 15px;
+        font-size: 0.85rem;
+        transition: all 0.3s ease;
+    }
+    
+    .custom-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 5px;
+    }
+
+</style>
 <div class="container mt-4">
     <div class="row">
         <!-- Middle Column -->
         <div class="col-md-8">
             <!-- Post Creation Form -->
-            <div class="card mb-4 ">
+            <!-- Post Creation Form -->
+            <div class="card mb-4">
                 <div class="card-body">
                     <form method="post" enctype="multipart/form-data" id="postForm">
                         {% csrf_token %}
                         <div class="d-flex align-items-center mb-3">
-                            {% if post.user.profile_pic %}
-                    <img src="{{ post.user.profile_pic.url }}" alt="{{ post.user.username }}" class="rounded-circle me-2" width="40" height="40">
-                    {% else %}
-                    <img src="{% static 'img/default_profile_pic.png' %}" alt="Default Profile Pic" class="rounded-circle me-2" width="40" height="40">
-                    {% endif %}
-                            <textarea class="form-control border-0 shadow-none" name="caption" rows="2" placeholder="What's on your mind, {{ user.first_name }}?"></textarea>
+                            {% if user.profile_pic %}
+                            <img src="{{ user.profile_pic.url }}" alt="{{ user.username }}" class="rounded-circle me-2" width="40" height="40">
+                            {% else %}
+                            <img src="{% static 'img/default_profile_pic.png' %}" alt="Default Profile Pic" class="rounded-circle me-2" width="40" height="40">
+                            {% endif %}
+                            <textarea class="form-control border-0 shadow-none" name="caption" rows="2" placeholder="How about sharing something today?"></textarea>
                         </div>
-                        <div id="postOptions" class="d-none">
-                            <div class="mb-3">
-                                <div id="filePreview" class="d-flex flex-wrap gap-2 mb-2"></div>
-                                <label for="fileInput" class="btn btn-outline-primary btn-sm">
-                                    <i class="fas fa-image me-2"></i>Photo/Video
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex">
+                                <label for="fileInput" class="btn btn-light btn-sm me-2" title="Photo/Video">
+                                    <i class="fas fa-image"></i>
                                 </label>
                                 <input type="file" id="fileInput" name="files" accept="image/*,video/*,audio/*" multiple style="display: none;">
+                                
+                                <button type="button" class="btn btn-light btn-sm me-2" id="feelingBtn" title="Feeling/Activity">
+                                    <i class="fas fa-smile"></i>
+                                </button>
+                                
+                                <button type="button" class="btn btn-light btn-sm me-2" id="tagBtn" title="Tag Friends">
+                                    <i class="fas fa-user-tag"></i>
+                                </button>
+                                
+                                <button type="button" class="btn btn-light btn-sm" id="visibilityBtn" title="Post Visibility">
+                                    <i class="fas fa-globe"></i>
+                                </button>
                             </div>
-                            <div class="row g-2 mb-3">
-                                <div class="col-sm-6 col-md-3">
-                                    <select class="form-select form-select-sm" name="feeling">  
-                                        <option value="happy">😊 Happy</option>
-                                        <option value="sad">😢 Sad</option>
-                                        <option value="angry">😠 Angry</option>
-                                        <option value="surprised">😲 Surprised</option>
-                                        <option value="love">💖 Love</option>
-                                        <option value="thankful">🙏 Thankful</option>
-                                        <option value="confused">😕 Confused</option>
-                                        <option value="excited">🎉 Excited</option>
-                                        <option value="calm">😌 Calm</option>
-                                        <option value="none">None</option>
-                                    </select>
-                                </div>
-                                <div class="col-sm-6 col-md-3">
-                                    <select class="form-select form-select-sm" name="visibility" id="visibilitySelect">
-                                        <option value="everyone">🌎 Everyone</option>
-                                        <option value="friends">👥 Friends</option>
-                                        <option value="private">🔒 Only me</option>
-                                        <option value="selected">👤 Specific friends</option>
-                                    </select>
-                                </div>
-                                <div class="col-sm-12 col-md-6">
-                                    <select class="form-select form-select-sm" id="taggedFriends" name="tagged_friends" multiple data-placeholder="Tag friends">
-                                        {% for friendship in friends %}
-                                            {% if friendship.friend.tag_settings.allow_tagging %}
-                                                <option value="{{ friendship.friend.id }}">{{ friendship.friend.username }}</option>
-                                            {% endif %}
-                                        {% endfor %}
-                                    </select>
-                                </div>
+                            <button type="submit" class="btn btn-primary btn-sm">Post</button>
+                        </div>
+                        
+                        <div id="postOptions" class="mt-3 d-none">
+                            <div id="filePreview" class="d-flex flex-wrap gap-2 mb-2"></div>
+                            
+                            <div id="feelingSelect" class="mb-2 d-none">
+                                <select class="form-select form-select-sm" name="feeling">
+                                    <option value="none">How are you feeling?</option>
+                                    <option value="happy">😊 Happy</option>
+                                    <option value="sad">😢 Sad</option>
+                                    <option value="angry">😠 Angry</option>
+                                    <option value="surprised">😲 Surprised</option>
+                                    <option value="love">💖 Love</option>
+                                    <option value="thankful">🙏 Thankful</option>
+                                    <option value="confused">😕 Confused</option>
+                                    <option value="excited">🎉 Excited</option>
+                                    <option value="calm">😌 Calm</option>
+                                </select>
                             </div>
-                            <div id="selectedFriendsContainer" class="mb-3 d-none">
+                            
+                            <div id="tagSelect" class="mb-2 d-none">
+                                <select class="form-select form-select-sm" id="taggedFriends" name="tagged_friends" multiple data-placeholder="Tag friends">
+                                    {% for friendship in friends %}
+                                        {% if friendship.friend.tag_settings.allow_tagging %}
+                                            <option value="{{ friendship.friend.id }}">{{ friendship.friend.username }}</option>
+                                        {% endif %}
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div id="visibilitySelect" class="mb-2 d-none">
+                                <select class="form-select form-select-sm" name="visibility">
+                                    <option value="everyone">🌎 Everyone</option>
+                                    <option value="friends">👥 Friends</option>
+                                    <option value="private">🔒 Only me</option>
+                                    <option value="selected">👤 Specific friends</option>
+                                </select>
+                            </div>
+                            
+                            <div id="selectedFriendsContainer" class="mb-2 d-none">
                                 <h6 class="mb-2">Select friends who can see this post:</h6>
                                 <div class="d-flex flex-wrap gap-2">
                                     {% for friendship in friends %}
@@ -74,13 +145,9 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="d-flex justify-content-end">
-                            <button type="submit" class="btn btn-primary">Post</button>
-                        </div>
                     </form>
                 </div>
             </div>
-
             <!-- Posts Feed -->
             {% for post in posts %}
                 {% include 'post/post_card.html' with post=post %}
@@ -92,37 +159,39 @@
     
         
         <!-- Right Column -->
-        <div class="col-md-4">
+        <div class="col-md-4 d-none d-md-block">
             <!-- User Profile Card -->
             <a href="{% url 'accounts:profile' user.username %}" class="card mb-4 text-decoration-none text-dark">
                 <div class="card-body d-flex align-items-center">
                 {% if user.profile_pic %}
-                <img src="{{ user.profile_pic.url }}" alt="{{ user.username }}" class="rounded-circle me-3" width="50" height="50">
+                <img src="{{ user.profile_pic.url }}" alt="{{ user.username }}" class="rounded-circle border border-secondary    me-3" width="50" height="50">
                 {% else %}
-                <img src="{% static 'img/default_profile_pic.png' %}" alt="{{ user.username }}" class="rounded-circle me-3" width="50" height="50">
+                <img src="{% static 'img/default_profile_pic.png' %}" alt="{{ user.username }}" class="rounded-circle border border-secondary me-3" width="50" height="50">
                 {% endif %}
                 <div>
-                    <h5 class="card-title mb-1">{{ user.username }}</h5>
-                    <p class="card-text mb-0">{{ user.email }}</p>
+                    <h5 class="card-title mb-1">{{ user.first_name }} {{ user.last_name }}</h5>
+                    <p class="card-text mb-0">@{{ user.username }}</p>
                 </div>
                 </div>
             </a>
             <!-- People You May Know -->
-            <div class="card mb-4">
-                <div class="card-header">People You May Know</div>
+            <div class="card mb-4 custom-card">
+                <div class="card-header custom-header">People You May Know</div>
                 <ul class="list-group list-group-flush">
                     {% for user in unknown_users %}
-                    <li class="list-group-item">
+                    <li class="list-group-item custom-list-item">
                         <div class="d-flex justify-content-between align-items-center">
-                            <div>
+                            <div class="user-info">
+                                <a href="{% url 'accounts:profile' user.username %}" class="text-decoration-none text-dark">
                                 {% if user.profile_pic %}
-                                <img src="{{ user.profile_pic.url }}" alt="{{ user.username }}" class="rounded-circle me-2" width="32" height="32">
+                                <img src="{{ user.profile_pic.url }}" alt="{{ user.username }}" class="rounded-circle me-2" width="40" height="40">
                                 {% else %}
-                                <img src="{% static 'img/default_profile_pic.png' %}" alt="{{ user.username }}" class="rounded-circle me-2" width="32" height="32">
+                                <img src="{% static 'img/default_profile_pic.png' %}" alt="{{ user.username }}" class="rounded-circle me-2" width="40" height="40">
                                 {% endif %}
-                                {{ user.username }}
+                                <span class="username">{{ user.username }}</span>
+                                </a>
                             </div>
-                            <a href="{% url 'friends:send_friend_request' user.username %}" class="btn btn-primary btn-sm">Add Friend</a>
+                            <a href="{% url 'friends:send_friend_request' user.username %}" class="btn btn-primary btn-sm custom-btn" data-bs-toggle="tooltip" data-bs-placement="top" title="Add Friend"><i class="fas fa-user-plus"></i></a>
                         </div>
                     </li>
                     {% endfor %}
@@ -130,23 +199,25 @@
             </div>
 
             <!-- Friend Requests -->
-            <div class="card">
-                <div class="card-header">Friend Requests</div>
+            <div class="card custom-card">
+                <div class="card-header custom-header">Friend Requests</div>
                 <ul class="list-group list-group-flush">
                     {% for request in friend_requests %}
-                    <li class="list-group-item">
+                    <li class="list-group-item custom-list-item">
                         <div class="d-flex justify-content-between align-items-center">
-                            <div>
+                            <div class="user-info">
+                                <a href="{% url 'accounts:profile' request.from_user.username %}" class="text-decoration-none text-dark">
                                 {% if request.from_user.profile_pic %}
-                                <img src="{{ request.from_user.profile_pic.url }}" alt="{{ request.from_user.username }}" class="rounded-circle me-2" width="32" height="32">
+                                <img src="{{ request.from_user.profile_pic.url }}" alt="{{ request.from_user.username }}" class="rounded-circle me-2" width="40" height="40">
                                 {% else %}
-                                <img src="{% static 'img/default_profile_pic.png' %}" alt="{{ request.from_user.username }}" class="rounded-circle me-2" width="32" height="32">
+                                <img src="{% static 'img/default_profile_pic.png' %}" alt="{{ request.from_user.username }}" class="rounded-circle me-2" width="40" height="40">
                                 {% endif %}
-                                {{ request.from_user.username }}
+                                <span class="username">{{ request.from_user.username }}</span>
+                                </a>
                             </div>
-                            <div>
-                                <a href="{% url 'friends:accept_friend_request' request.id %}" class="btn btn-success btn-sm me-2">Accept</a>
-                                <a href="{% url 'friends:reject_friend_request' request.id %}" class="btn btn-danger btn-sm">Reject</a>
+                            <div class="action-buttons">
+                                <a href="{% url 'friends:accept_friend_request' request.id %}" class="btn btn-success btn-sm custom-btn me-2" data-bs-toggle="tooltip" data-bs-placement="top" title="Accept"><i class="fas fa-check"></i></a>
+                                <a href="{% url 'friends:reject_friend_request' request.id %}" class="btn btn-danger btn-sm custom-btn" data-bs-toggle="tooltip" data-bs-placement="top" title="Reject"><i class="fas fa-times"></i></a>
                             </div>
                         </div>
                     </li>
@@ -165,6 +236,11 @@
         const postOptions = document.getElementById('postOptions');
         const fileInput = document.getElementById('fileInput');
         const filePreview = document.getElementById('filePreview');
+        const feelingBtn = document.getElementById('feelingBtn');
+        const tagBtn = document.getElementById('tagBtn');
+        const visibilityBtn = document.getElementById('visibilityBtn');
+        const feelingSelect = document.getElementById('feelingSelect');
+        const tagSelect = document.getElementById('tagSelect');
         const visibilitySelect = document.getElementById('visibilitySelect');
         const selectedFriendsContainer = document.getElementById('selectedFriendsContainer');
         const maxFiles = 50;
@@ -173,11 +249,23 @@
             event.stopPropagation();
             postOptions.classList.remove('d-none');
         });
-
+    
         document.addEventListener('click', function(event) {
             if (!postForm.contains(event.target)) {
                 postOptions.classList.add('d-none');
             }
+        });
+    
+        feelingBtn.addEventListener('click', function() {
+            feelingSelect.classList.toggle('d-none');
+        });
+    
+        tagBtn.addEventListener('click', function() {
+            tagSelect.classList.toggle('d-none');
+        });
+    
+        visibilityBtn.addEventListener('click', function() {
+            visibilitySelect.classList.toggle('d-none');
         });
     
         $('#taggedFriends').select2({

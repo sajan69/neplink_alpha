@@ -1,47 +1,57 @@
 <div class="modal fade" id="shareModal-{{ post.id }}" tabindex="-1" aria-labelledby="shareModalLabel-{{ post.id }}" aria-hidden="true">
     <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
+       <div class="modal-content">
+          <form action="{% url 'post:post_management' %}" method="post">
+             {% csrf_token %}
+             <input type="hidden" name="action" value="share_post">
+             <input type="hidden" name="post_id" value="{{ post.id }}">
+             <div class="modal-header">
                 <h5 class="modal-title" id="shareModalLabel-{{ post.id }}">Share Post</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form action="{% url 'post:post_management' %}" method="post">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="share_post">
-                <input type="hidden" name="post_id" value="{{ post.id }}">
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="share-caption-{{ post.id }}" class="form-label">Add a caption (optional)</label>
-                        <textarea class="form-control" id="share-caption-{{ post.id }}" name="caption" rows="3"></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label for="share-visibility-{{ post.id }}" class="form-label">Visibility</label>
-                        <select class="form-select" id="share-visibility-{{ post.id }}" name="visibility">
-                            <option value="everyone">Everyone</option>
-                            <option value="friends">Friends</option>
-                            <option value="private">Private</option>
-                            <option value="selected">Selected Friends</option>
-                        </select>
-                    </div>
-                    <div id="shareSelectedFriendsContainer-{{ post.id }}" style="display: none;">
-                        <label class="form-label">Select Friends</label>
-                        <div class="form-check">
-                            {% for friend in user.friends.all %}
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="selected_friends" value="{{ friend.id }}" id="share-friend-{{ friend.id }}-{{ post.id }}">
-                                    <label class="form-check-label" for="share-friend-{{ friend.id }}-{{ post.id }}">
-                                        {{ friend.username }}
-                                    </label>
-                                </div>
-                            {% endfor %}
-                        </div>
-                    </div>
+             </div>
+             <div class="modal-body">
+                <div class="mb-3">
+                   <label for="share-caption-{{ post.id }}" class="form-label">Add a caption</label>
+                   <textarea class="form-control" id="share-caption-{{ post.id }}" name="share_caption" rows="3"></textarea>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="submit" class="btn btn-primary">Share</button>
+                <div class="mb-3">
+                   <label for="share-feeling-{{ post.id }}" class="form-label">Feeling</label>
+                   <select class="form-select" id="share-feeling-{{ post.id }}" name="feeling">
+                      <option value="">How are you feeling?</option>
+                      <option value="happy">Happy</option>
+                      <option value="sad">Sad</option>
+                      <option value="excited">Excited</option>
+                      <option value="angry">Angry</option>
+                      <option value="surprised">Surprised</option>
+                      <option value="love">Love</option>
+                      <option value="thankful">Thankful</option>
+                      <option value="confused">Confused</option>
+                      <option value="calm">Calm</option>
+                   </select>
                 </div>
-            </form>
-        </div>
+                <div class="mb-3">
+                   <label for="share-visibility-{{ post.id }}" class="form-label">Visibility</label>
+                   <select class="form-select" id="share-visibility-{{ post.id }}" name="visibility">
+                      <option value="everyone">Everyone</option>
+                      <option value="friends">Friends</option>
+                      <option value="private">Private</option>
+                      <option value="selected">Selected Friends</option>
+                   </select>
+                </div>
+                <div id="shareSelectedFriendsContainer-{{ post.id }}" class="mb-3" style="display: none;">
+                   <label for="share-selected-friends-{{ post.id }}" class="form-label">Selected Friends</label>
+                   <select class="form-select" id="share-selected-friends-{{ post.id }}" name="selected_friends" multiple>
+                      {% for friendship in friends %}
+                      <option value="{{ friendship.friend.id }}">{{ friendship.friend.username }}</option>
+                      {% endfor %}
+                   </select>
+                </div>
+             </div>
+             <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="submit" class="btn btn-primary">Share</button>
+             </div>
+          </form>
+       </div>
     </div>
-</div>
+ </div>

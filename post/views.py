@@ -75,7 +75,7 @@ class PostManagementView(LoginRequiredMixin, View):
                     [post.user.id],
                     reverse('post:post_detail', args=[post.id])
                 )
-        return redirect('accounts:home')
+        return redirect(request.META.get('HTTP_REFERER', 'accounts:home'))
 
     def like_comment(self, request, post):
         comment_id = request.POST.get('comment_id')
@@ -93,7 +93,7 @@ class PostManagementView(LoginRequiredMixin, View):
                     [comment.user.id],
                     reverse('post:post_detail', args=[post.id])
                 )
-        return redirect('accounts:home')
+        return redirect(request.META.get('HTTP_REFERER', 'accounts:home'))
 
     def add_comment(self, request, post):
         text = request.POST.get('text')
@@ -109,14 +109,14 @@ class PostManagementView(LoginRequiredMixin, View):
                 )
         else:
             messages.error(request, 'Comment text is required')
-        return redirect('accounts:home')
+        return redirect(request.META.get('HTTP_REFERER', 'accounts:home'))
 
     def delete_comment(self, request, post):
         comment_id = request.POST.get('comment_id')
         comment = get_object_or_404(Comment, id=comment_id, user=request.user)
         comment.delete()
         messages.success(request, 'Comment deleted successfully')
-        return redirect('accounts:home')
+        return redirect(request.META.get('HTTP_REFERER', 'accounts:home'))
 
     def delete_post(self, request, post):
         if request.user != post.user:
@@ -124,7 +124,7 @@ class PostManagementView(LoginRequiredMixin, View):
         else:
             post.delete()
             messages.success(request, 'Post deleted successfully')
-        return redirect('accounts:home')
+        return redirect(request.META.get('HTTP_REFERER', 'accounts:home'))
     
     def edit_post(self, request, post):
         post.caption = request.POST.get('caption', post.caption)
@@ -153,7 +153,7 @@ class PostManagementView(LoginRequiredMixin, View):
 
         post.save()
         messages.success(request, 'Post updated successfully')
-        return redirect('accounts:home')
+        return redirect(request.META.get('HTTP_REFERER', 'accounts:home'))
     
     def get_file_type(self, filename):
         extension = filename.split('.')[-1].lower()
@@ -172,7 +172,7 @@ class PostManagementView(LoginRequiredMixin, View):
         comment.text = request.POST.get('text', comment.text)
         comment.save()
         messages.success(request, 'Comment updated successfully')
-        return redirect('accounts:home')
+        return redirect(request.META.get('HTTP_REFERER', 'accounts:home'))
 
     def share_post(self, request, post):
         share_caption = request.POST.get('share_caption', '')
@@ -203,7 +203,7 @@ class PostManagementView(LoginRequiredMixin, View):
                 [post.user.id],
                 reverse('post:post_detail', args=[shared_post.id])
             )
-        return redirect('accounts:home')
+        return redirect(request.META.get('HTTP_REFERER', 'accounts:home'))
 
     def like_reply(self, request, post):
         reply_id = request.POST.get('reply_id')
@@ -221,7 +221,7 @@ class PostManagementView(LoginRequiredMixin, View):
                     [reply.user.id],
                     reverse('post:post_detail', args=[post.id])
                 )
-        return redirect('accounts:home')
+        return redirect(request.META.get('HTTP_REFERER', 'accounts:home'))
 
     def add_reply(self, request, post):
         comment_id = request.POST.get('comment_id')
@@ -239,7 +239,7 @@ class PostManagementView(LoginRequiredMixin, View):
                 )
         else:
             messages.error(request, 'Reply text is required')
-        return redirect('accounts:home')
+        return redirect(request.META.get('HTTP_REFERER', 'accounts:home'))
 
     def edit_reply(self, request, post):
         reply_id = request.POST.get('reply_id')
@@ -247,21 +247,21 @@ class PostManagementView(LoginRequiredMixin, View):
         reply.text = request.POST.get('text', reply.text)
         reply.save()
         messages.success(request, 'Reply updated successfully')
-        return redirect('accounts:home')
+        return redirect(request.META.get('HTTP_REFERER', 'accounts:home'))
 
     def delete_reply(self, request, post):
         reply_id = request.POST.get('reply_id')
         reply = get_object_or_404(CommentReply, id=reply_id, user=request.user)
         reply.delete()
         messages.success(request, 'Reply deleted successfully')
-        return redirect('accounts:home')
+        return redirect(request.META.get('HTTP_REFERER', 'accounts:home'))
     
     def hide_unhide_post(self, request, post):
         post.is_hidden = not post.is_hidden
         post.save()
         action = "hidden" if post.is_hidden else "unhidden"
         messages.success(request, f'Post {action} successfully')
-        return redirect('accounts:home')
+        return redirect(request.META.get('HTTP_REFERER', 'accounts:home'))
     
     def tag_friends(self, request, post):
         tagged_user_ids = request.POST.getlist('tagged_friends')
@@ -277,13 +277,13 @@ class PostManagementView(LoginRequiredMixin, View):
                     reverse('post:post_detail', args=[post.id])
                 )
         messages.success(request, 'Friends tagged successfully')
-        return redirect('accounts:home')
+        return redirect(request.META.get('HTTP_REFERER', 'accounts:home'))
 
     def remove_tag(self, request, post):
         user = request.user
         post.tagged_users.remove(user)
         messages.success(request, 'You have been removed from the tagged post')
-        return redirect('accounts:home')
+        return redirect(request.META.get('HTTP_REFERER', 'accounts:home'))
     
 
 class PostDetailView(LoginRequiredMixin, View):

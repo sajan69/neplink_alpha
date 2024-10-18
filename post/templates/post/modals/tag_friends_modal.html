@@ -1,37 +1,29 @@
 <div class="modal fade" id="tagFriendsModal-{{ post.id }}" tabindex="-1" aria-labelledby="tagFriendsModalLabel-{{ post.id }}" aria-hidden="true">
     <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
+       <div class="modal-content">
+          <form action="{% url 'post:post_management' %}" method="post">
+             {% csrf_token %}
+             <input type="hidden" name="action" value="tag_friends">
+             <input type="hidden" name="post_id" value="{{ post.id }}">
+             <div class="modal-header">
                 <h5 class="modal-title" id="tagFriendsModalLabel-{{ post.id }}">Tag Friends</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form action="{% url 'post:post_management' %}" method="post">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="tag_friends">
-                <input type="hidden" name="post_id" value="{{ post.id }}">
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Select Friends to Tag</label>
-                        <div class="form-check">
-                            {% for friend in user.friends.all %}
-                                {% if friend.tag_settings.allow_tagging %}
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="tagged_friends" value="{{ friend.id }}" id="tag-friend-{{ friend.id }}-{{ post.id }}"
-                                            {% if friend in post.tagged_users.all %}checked{% endif %}>
-                                        <label class="form-check-label" for="tag-friend-{{ friend.id }}-{{ post.id }}">
-                                            {{ friend.username }}
-                                        </label>
-                                    </div>
-                                {% endif %}
-                            {% endfor %}
-                        </div>
-                    </div>
+             </div>
+             <div class="modal-body">
+                <div class="mb-3">
+                   <label for="tagged-friends-{{ post.id }}" class="form-label">Select friends to tag:</label>
+                   <select class="form-select" id="tagged-friends-{{ post.id }}" name="tagged_friends" multiple>
+                      {% for friendship in friends %}
+                      <option value="{{ friendship.friend.id }}">{{ friendship.friend.username }}</option>
+                      {% endfor %}
+                   </select>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="submit" class="btn btn-primary">Tag Friends</button>
-                </div>
-            </form>
-        </div>
+             </div>
+             <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="submit" class="btn btn-primary">Tag Friends</button>
+             </div>
+          </form>
+       </div>
     </div>
-</div>
+ </div>

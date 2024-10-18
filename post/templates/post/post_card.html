@@ -50,12 +50,114 @@
    font-size: 2em;
    font-weight: bold;
    }
-   .carousel-item img,
-   .carousel-item video {
-   width: 100%;
-   max-height: 500px;
-   object-fit: contain;
-   }
+   .custom-carousel {
+      position: relative;
+      overflow: hidden;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+  
+  .custom-carousel .carousel-inner {
+      position: relative;
+      width: 100%;
+      height: 0;
+      padding-bottom: 100%; /* This creates a square aspect ratio */
+  }
+  
+  .custom-carousel .carousel-item {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      transition: opacity 0.3s ease-in-out;
+  }
+  
+  .custom-carousel .carousel-item.active {
+      opacity: 1;
+  }
+  
+  .custom-carousel img,
+  .custom-carousel video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+  }
+  
+  .custom-carousel .carousel-control {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background-color: rgba(255, 255, 255, 0.7);
+      border: none;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      z-index: 10;
+  }
+  
+  .custom-carousel .carousel-control:hover {
+      background-color: rgba(255, 255, 255, 0.9);
+  }
+  
+  .custom-carousel .prev {
+      left: 10px;
+  }
+  
+  .custom-carousel .next {
+      right: 10px;
+  }
+  
+  .custom-carousel .carousel-indicators {
+      position: absolute;
+      bottom: 10px;
+      left: 35%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 4px;
+      z-index: 10;
+      background-color: rgba(128, 128, 128, 0.5);
+      padding: 5px 10px;
+      border-radius: 15px;
+  }
+  
+  .custom-carousel .indicator {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background-color: rgba(255, 255, 255, 0.5);
+      cursor: pointer;
+      transition: background-color 0.2s;
+  }
+  
+  .custom-carousel .indicator.active {
+      background-color: #fff;
+  }
+  
+  .audio-item {
+      background-color: #f8f9fa;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  }
+  
+  .audio-item audio {
+      width: 100%;
+      margin-bottom: 8px;
+  }
+  
+  .audio-item small {
+      display: block;
+      text-align: center;
+      color: #6c757d;
+  }
+   
 </style>
 <div class="card mb-4 post" id="post-{{ post.id }}">
    <div class="card-header d-flex justify-content-between align-items-center">
@@ -213,6 +315,7 @@
                   Feeling {{ post.shared_post.get_feeling_display }}</p>
                {% endif %}
                <p class="card-text">{{ post.shared_post.caption }}</p>
+               </a>
                {% if post.shared_post.media.exists %}
                <!-- Include shared post media here -->
                <div class="post-media mb-3">
@@ -271,10 +374,11 @@
                   {% endwith %}
                </div>
                {% endif %}
-               </a>
+              
             </div>
          </div>
       {% else %}
+      <a href="{% url 'post:post_detail' post.id %}" class="text-decoration-none text-dark">
          {% if post.feeling %}
          <p class="mb-2">
              {%if post.feeling == 'happy' %}
@@ -298,61 +402,35 @@
              {%endif%} Feeling {{ post.get_feeling_display }}</p>
          {% endif %}
          <p class="card-text">{{ post.caption }}</p>
+         </a>
          {% if post.media.exists %}
          <div class="post-media mb-3">
-            {% with images_and_videos=post.media.all|dictsort:"file_type" %}
-            {% with audio_files=post.media.all|dictsort:"file_type" %}
-            <div class="media-grid">
-               {% for media in images_and_videos %}
-               {% if media.file_type == 'image' or media.file_type == 'video' %}
-               {% if forloop.counter <= 4 %}
-               <div class="media-item {% if forloop.counter == 1 and forloop.revcounter == 1 %}full{% elif forloop.counter <= 2 and images_and_videos|length <= 2 %}half{% else %}quarter{% endif %}">
-                  {% include "post/media_item.html" with media=media %}
-                  {% if forloop.counter == 4 and images_and_videos|length > 4 %}
-                  <div class="media-overlay">
-                     <span>+{{ images_and_videos|length|add:"-4" }}</span>
-                  </div>
-                  {% endif %}
-               </div>
-               {% endif %}
-               {% endif %}
-               {% endfor %}
-            </div>
-            {% if images_and_videos|length > 4 %}
-            <div class="media-carousel mt-2">
-               <div id="mediaCarousel-{{ post.id }}" class="carousel slide" data-bs-ride="carousel">
-                  <div class="carousel-inner">
-                     {% for media in images_and_videos %}
-                     {% if media.file_type == 'image' or media.file_type == 'video' %}
+            <div id="mediaCarousel-{{ post.id }}" class="custom-carousel">
+               <div class="carousel-inner">
+                     {% for media in post.media.all %}
                      <div class="carousel-item {% if forloop.first %}active{% endif %}">
                         {% include "post/media_item.html" with media=media %}
                      </div>
-                     {% endif %}
                      {% endfor %}
-                  </div>
-                  <button class="carousel-control-prev" type="button" data-bs-target="#mediaCarousel-{{ post.id }}" data-bs-slide="prev">
-                  <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                  <span class="visually-hidden">Previous</span>
-                  </button>
-                  <button class="carousel-control-next" type="button" data-bs-target="#mediaCarousel-{{ post.id }}" data-bs-slide="next">
-                  <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                  <span class="visually-hidden">Next</span>
-                  </button>
                </div>
-            </div>
-            {% endif %}
-            <div class="audio-files mt-3">
-               {% for media in audio_files %}
-               {% if media.file_type == 'audio' %}
-               <div class="audio-item mb-2">
-                  <audio src="{{ media.file.url }}" controls class="w-100"></audio>
-                  <small class="text-muted">{{ media.file.name }}</small>
+               {% if post.media.count > 1 %}
+               <button class="carousel-control prev" type="button">
+                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                        <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+                     </svg>
+               </button>
+               <button class="carousel-control next" type="button">
+                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                        <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
+                     </svg>
+               </button>
+               <div class="carousel-indicators">
+                     {% for media in post.media.all %}
+                     <span class="indicator {% if forloop.first %}active{% endif %}"></span>
+                     {% endfor %}
                </div>
                {% endif %}
-               {% endfor %}
             </div>
-            {% endwith %}
-            {% endwith %}
          </div>
          {% endif %}
       {% endif %}
@@ -387,6 +465,7 @@
          </small>
       </div>
    </div>
+   <!-- Comments Section -->
    <div class="collapse" id="comments-{{ post.id }}">
       <div class="card-body pt-0">
          <form action="{% url 'post:post_management' %}" method="post" class="mb-3">
@@ -456,77 +535,7 @@
 </div>
 
 <!-- Edit Post Modal -->
-<div class="modal fade" id="editPostModal-{{ post.id }}" tabindex="-1" aria-labelledby="editPostModalLabel-{{ post.id }}" aria-hidden="true">
-   <div class="modal-dialog">
-      <div class="modal-content">
-         <form action="{% url 'post:post_management' %}" method="post" enctype="multipart/form-data">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="edit_post">
-            <input type="hidden" name="post_id" value="{{ post.id }}">
-            <div class="modal-header">
-               <h5 class="modal-title" id="editPostModalLabel-{{ post.id }}">Edit Post</h5>
-               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-               <div class="mb-3">
-                  <label for="caption-{{ post.id }}" class="form-label">Caption</label>
-                  <textarea class="form-control" id="caption-{{ post.id }}" name="caption" rows="3">{{ post.caption }}</textarea>
-               </div>
-               <div class="mb-3">
-                  <label for="feeling-{{ post.id }}" class="form-label">Feeling</label>
-                  <select class="form-select" id="feeling-{{ post.id }}" name="feeling">
-                     <option value="">How are you feeling?</option>
-                     <option value="happy" {% if post.feeling == 'happy' %}selected{% endif %}>Happy</option>
-                     <option value="sad" {% if post.feeling == 'sad' %}selected{% endif %}>Sad</option>
-                     <option value="excited" {% if post.feeling == 'excited' %}selected{% endif %}>Excited</option>
-                     <option value="angry" {% if post.feeling == 'angry' %}selected{% endif %}>Angry</option>
-                  </select>
-               </div>
-               <div class="mb-3">
-                  <label for="visibility-{{ post.id }}" class="form-label">Visibility</label>
-                  <select class="form-select" id="visibility-{{ post.id }}" name="visibility">
-                     <option value="everyone" {% if post.visibility == 'everyone' %}selected{% endif %}>Everyone</option>
-                     <option value="friends" {% if post.visibility == 'friends' %}selected{% endif %}>Friends</option>
-                     <option value="private" {% if post.visibility == 'private' %}selected{% endif %}>Private</option>
-                     <option value="selected" {% if post.visibility == 'selected' %}selected{% endif %}>Selected Friends</option>
-                  </select>
-               </div>
-               <div id="selectedFriendsContainer-{{ post.id }}" class="mb-3" {% if post.visibility != 'selected' %}style="display: none;"{% endif %}>
-                  <label for="selected_friends-{{ post.id }}" class="form-label">Selected Friends</label>
-                  <select class="form-select" id="selected_friends-{{ post.id }}" name="selected_friends" multiple>
-                     {% for friendship in friends %}
-                     <option value="{{ friendship.friend.id }}" {% if friendship.friend in post.selected_friends.all %}selected{% endif %}>{{ friendship.friend.username }}</option>
-                     {% endfor %}
-                  </select>
-               </div>
-               <div class="mb-3">
-                  <label for="files-{{ post.id }}" class="form-label">Media</label>
-                  <input type="file" class="form-control" id="files-{{ post.id }}" name="files" multiple>
-                  <div id="filePreview-{{ post.id }}" class="mt-2">
-                     {% for media in post.media.all %}
-                     <div class="preview-item mb-2">
-                        {% if media.file_type == 'image' %}
-                        <img src="{{ media.file.url }}" alt="Post image" style="max-width: 100px; max-height: 100px;">
-                        {% elif media.file_type == 'video' %}
-                        <video src="{{ media.file.url }}" style="max-width: 100px; max-height: 100px;"></video>
-                        {% elif media.file_type == 'audio' %}
-                        <audio src="{{ media.file.url }}" controls></audio>
-                        {% endif %}
-                        <span>{{ media.file.name }}</span>
-                        <button type="button" class="btn btn-sm btn-danger remove-file" data-media-id="{{ media.id }}">Remove</button>
-                     </div>
-                     {% endfor %}
-                  </div>
-               </div>
-            </div>
-            <div class="modal-footer">
-               <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-               <button type="submit" class="btn btn-primary">Save changes</button>
-            </div>
-         </form>
-      </div>
-   </div>
-</div>
+{% include "post/modals/edit_post_modal.html" %}
 <!-- Delete Post Modal -->
 <div class="modal fade" id="deletePostModal-{{ post.id }}" tabindex="-1" aria-labelledby="deletePostModalLabel-{{ post.id }}" aria-hidden="true">
    <div class="modal-dialog">
@@ -551,34 +560,7 @@
    </div>
 </div>
 <!-- Edit Comment Modal -->
-{% for comment in post.comments.all %}
-<div class="modal fade" id="editCommentModal-{{ comment.id }}" tabindex="-1" aria-labelledby="editCommentModalLabel-{{ comment.id }}" aria-hidden="true">
-   <div class="modal-dialog">
-      <div class="modal-content">
-         <form action="{% url 'post:post_management' %}" method="post">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="edit_comment">
-            <input type="hidden" name="post_id" value="{{ post.id }}">
-            <input type="hidden" name="comment_id" value="{{ comment.id }}">
-            <div class="modal-header">
-               <h5 class="modal-title" id="editCommentModalLabel-{{ comment.id }}">Edit Comment</h5>
-               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-               <div class="mb-3">
-                  <label for="comment-text-{{ comment.id }}" class="form-label">Comment</label>
-                  <textarea class="form-control" id="comment-text-{{ comment.id }}" name="text" rows="3">{{ comment.text }}</textarea>
-               </div>
-            </div>
-            <div class="modal-footer">
-               <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-               <button type="submit" class="btn btn-primary">Save changes</button>
-            </div>
-         </form>
-      </div>
-   </div>
-</div>
-{% endfor %}
+{% include "post/modals/edit_comment_modal.html" %}
 <!-- Delete Comment Modal -->
 {% for comment in post.comments.all %}
 <div class="modal fade" id="deleteCommentModal-{{ comment.id }}" tabindex="-1" aria-labelledby="deleteCommentModalLabel-{{ comment.id }}" aria-hidden="true">
@@ -606,36 +588,7 @@
 </div>
 {% endfor %}
 <!-- Edit Reply Modal -->
-{% for comment in post.comments.all %}
-{% for reply in comment.replies.all %}
-<div class="modal fade" id="editReplyModal-{{ reply.id }}" tabindex="-1" aria-labelledby="editReplyModalLabel-{{ reply.id }}" aria-hidden="true">
-   <div class="modal-dialog">
-      <div class="modal-content">
-         <form action="{% url 'post:post_management' %}" method="post">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="edit_reply">
-            <input type="hidden" name="post_id" value="{{ post.id }}">
-            <input type="hidden" name="reply_id" value="{{ reply.id }}">
-            <div class="modal-header">
-               <h5 class="modal-title" id="editReplyModalLabel-{{ reply.id }}">Edit Reply</h5>
-               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-               <div class="mb-3">
-                  <label for="reply-text-{{ reply.id }}" class="form-label">Reply</label>
-                  <textarea class="form-control" id="reply-text-{{ reply.id }}" name="text" rows="3">{{ reply.text }}</textarea>
-               </div>
-            </div>
-            <div class="modal-footer">
-               <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-               <button type="submit" class="btn btn-primary">Save changes</button>
-            </div>
-         </form>
-      </div>
-   </div>
-</div>
-{% endfor %}
-{% endfor %}
+{% include "post/modals/edit_reply_modal.html" %}
 <!-- Delete Reply Modal -->
 {% for comment in post.comments.all %}
 {% for reply in comment.replies.all %}
@@ -665,88 +618,9 @@
 {% endfor %}
 {% endfor %}
 <!-- Share Post Modal -->
-<div class="modal fade" id="shareModal-{{ post.id }}" tabindex="-1" aria-labelledby="shareModalLabel-{{ post.id }}" aria-hidden="true">
-   <div class="modal-dialog">
-      <div class="modal-content">
-         <form action="{% url 'post:post_management' %}" method="post">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="share_post">
-            <input type="hidden" name="post_id" value="{{ post.id }}">
-            <div class="modal-header">
-               <h5 class="modal-title" id="shareModalLabel-{{ post.id }}">Share Post</h5>
-               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-               <div class="mb-3">
-                  <label for="share-caption-{{ post.id }}" class="form-label">Add a caption</label>
-                  <textarea class="form-control" id="share-caption-{{ post.id }}" name="share_caption" rows="3"></textarea>
-               </div>
-               <div class="mb-3">
-                  <label for="share-feeling-{{ post.id }}" class="form-label">Feeling</label>
-                  <select class="form-select" id="share-feeling-{{ post.id }}" name="feeling">
-                     <option value="">How are you feeling?</option>
-                     <option value="happy">Happy</option>
-                     <option value="sad">Sad</option>
-                     <option value="excited">Excited</option>
-                     <option value="angry">Angry</option>
-                  </select>
-               </div>
-               <div class="mb-3">
-                  <label for="share-visibility-{{ post.id }}" class="form-label">Visibility</label>
-                  <select class="form-select" id="share-visibility-{{ post.id }}" name="visibility">
-                     <option value="everyone">Everyone</option>
-                     <option value="friends">Friends</option>
-                     <option value="private">Private</option>
-                     <option value="selected">Selected Friends</option>
-                  </select>
-               </div>
-               <div id="shareSelectedFriendsContainer-{{ post.id }}" class="mb-3" style="display: none;">
-                  <label for="share-selected-friends-{{ post.id }}" class="form-label">Selected Friends</label>
-                  <select class="form-select" id="share-selected-friends-{{ post.id }}" name="selected_friends" multiple>
-                     {% for friendship in friends %}
-                     <option value="{{ friendship.friend.id }}">{{ friendship.friend.username }}</option>
-                     {% endfor %}
-                  </select>
-               </div>
-            </div>
-            <div class="modal-footer">
-               <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-               <button type="submit" class="btn btn-primary">Share</button>
-            </div>
-         </form>
-      </div>
-   </div>
-</div>
+{% include "post/modals/share_post_modal.html" %}
 <!-- Tag Friends Modal -->
-<div class="modal fade" id="tagFriendsModal-{{ post.id }}" tabindex="-1" aria-labelledby="tagFriendsModalLabel-{{ post.id }}" aria-hidden="true">
-   <div class="modal-dialog">
-      <div class="modal-content">
-         <form action="{% url 'post:post_management' %}" method="post">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="tag_friends">
-            <input type="hidden" name="post_id" value="{{ post.id }}">
-            <div class="modal-header">
-               <h5 class="modal-title" id="tagFriendsModalLabel-{{ post.id }}">Tag Friends</h5>
-               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-               <div class="mb-3">
-                  <label for="tagged-friends-{{ post.id }}" class="form-label">Select friends to tag:</label>
-                  <select class="form-select" id="tagged-friends-{{ post.id }}" name="tagged_friends" multiple>
-                     {% for friendship in friends %}
-                     <option value="{{ friendship.friend.id }}">{{ friendship.friend.username }}</option>
-                     {% endfor %}
-                  </select>
-               </div>
-            </div>
-            <div class="modal-footer">
-               <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-               <button type="submit" class="btn btn-primary">Tag Friends</button>
-            </div>
-         </form>
-      </div>
-   </div>
-</div>
+{% include "post/modals/tag_friends_modal.html" %}
 <!-- Hidden forms for post actions -->
 <form id="like-form-{{ post.id }}" action="{% url 'post:post_management' %}" method="post" style="display: none;">
    {% csrf_token %}
@@ -776,89 +650,4 @@
 </form>
 {% endfor %}
 {% endfor %}
-<script>
-   document.addEventListener('DOMContentLoaded', function() {
-       const visibilitySelect = document.getElementById('visibility-{{ post.id }}');
-       const selectedFriendsContainer = document.getElementById('selectedFriendsContainer-{{ post.id }}');
-       const fileInput = document.getElementById('files-{{ post.id }}');
-       const filePreview = document.getElementById('filePreview-{{ post.id }}');
-       const maxFiles = 5;
-   
-       visibilitySelect.addEventListener('change', function() {
-           if (this.value === 'selected') {
-               selectedFriendsContainer.style.display = 'block';
-           } else {
-               selectedFriendsContainer.style.display = 'none';
-           }
-       });
-   
-       fileInput.addEventListener('change', function() {
-           if (this.files.length > maxFiles) {
-               alert(`You can only upload a maximum of ${maxFiles} files.`);
-               this.value = '';
-               return;
-           }
-           
-           for (let i = 0; i < this.files.length; i++) {
-               const file = this.files[i];
-               const reader = new FileReader();	
-               const previewItem = document.createElement('div');
-               previewItem.className = 'preview-item mb-2';
-   
-               reader.onload = function(e) {
-                   if (file.type.startsWith('image/')) {
-                       previewItem.innerHTML = `
-                           <img src="${e.target.result}" alt="Preview" style="max-width: 100px; max-height: 100px;">
-                           <span>${file.name}</span>
-                           <button type="button" class="btn btn-sm btn-danger remove-file">Remove</button>
-                       `;
-                   } else if (file.type.startsWith('video/')) {
-                       previewItem.innerHTML = `
-                           <video src="${e.target.result}" style="max-width: 100px; max-height: 100px;"></video>
-                           <span>${file.name}</span>
-                           <button type="button" class="btn btn-sm btn-danger remove-file">Remove</button>
-                       `;
-                   } else {
-                       previewItem.innerHTML = `
-                           <i class="fas fa-file"></i>
-                           <span>${file.name}</span>
-                           <button type="button" class="btn btn-sm btn-danger remove-file">Remove</button>
-                       `;
-                   }
-               }
-               reader.readAsDataURL(file);
-               filePreview.appendChild(previewItem);
-           }
-       });
-   
-       filePreview.addEventListener('click', function(e) {
-           if (e.target.classList.contains('remove-file')) {
-               const mediaId = e.target.dataset.mediaId;
-               if (mediaId) {
-                   const deletedMediaInput = document.createElement('input');
-                   deletedMediaInput.type = 'hidden';
-                   deletedMediaInput.name = 'deleted_media';
-                   deletedMediaInput.value = mediaId;
-                   e.target.closest('form').appendChild(deletedMediaInput);
-               }
-               e.target.closest('.preview-item').remove();
-           }
-       });
-   
-       const shareVisibilitySelect = document.getElementById('share-visibility-{{ post.id }}');
-       const shareSelectedFriendsContainer = document.getElementById('shareSelectedFriendsContainer-{{ post.id }}');
-   
-       shareVisibilitySelect.addEventListener('change', function() {
-           if (this.value === 'selected') {
-               shareSelectedFriendsContainer.style.display = 'block';
-           } else {
-               shareSelectedFriendsContainer.style.display = 'none';
-           }
-       });
-   });
-   
-   function toggleReplyForm(commentId) {
-       const replyForm = document.getElementById(`reply-form-${commentId}`);
-       replyForm.style.display = replyForm.style.display === 'none' ? 'block' : 'none';
-   }
-</script>
+<script src="{% static 'js/post_functionality.js' %}"></script>

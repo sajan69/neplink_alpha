@@ -1,20 +1,16 @@
-from django.views.generic import TemplateView
 from django.contrib.auth import get_user_model
-from django.db.models import Count, Avg
-from django.utils import timezone
-from datetime import timedelta
-from post.models import Post, Comment, Like
-from friends.models import Friendship
-from django.contrib.admin.views.decorators import staff_member_required
-from django.shortcuts import render
-
-User = get_user_model()
 from django.db.models import Count, Q, F
 from django.db.models.functions import TruncDate
+from post.models import Post, Comment, Like
 import json
 
-@staff_member_required
+User = get_user_model()
+
 def admin_dashboard(request):
+    # Only process for staff members
+    if not request.user.is_staff:
+        return {}
+
     context = {}
     
     # Basic statistics

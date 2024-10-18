@@ -1,6 +1,10 @@
-<!-- post/templates/post/media_item.html -->
 {% if media.file_type == 'image' %}
-    <img src="{{ media.file.url }}" alt="Post image" class="img-fluid rounded">
+    <img src="{{ media.file.url }}" alt="Post image" class="d-block w-100 rounded">
 {% elif media.file_type == 'video' %}
-    <video src="{{ media.file.url }}" controls class="w-100 rounded"></video>
+    <video src="{{ media.file.url }}" controls class="d-block w-100 rounded"></video>
+{% elif media.file_type == 'audio' %}
+    <div class="audio-item">
+        <audio src="{{ media.file.url }}" controls class="w-100"></audio>
+        <small class="text-muted">{{ media.file.name }}</small>
+    </div>
 {% endif %}

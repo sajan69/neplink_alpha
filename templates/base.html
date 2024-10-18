@@ -12,12 +12,22 @@
     <link href="
     https://cdn.jsdelivr.net/npm/sweetalert2@11.14.1/dist/sweetalert2.min.css
     " rel="stylesheet">
-
+<link href="{% static 'css/dark-theme.css' %}" rel="stylesheet">
     {% if user.is_authenticated %}
 <div id="notification-component" data-user-id="{{ request.user.id }}"></div>
 {% else %}
 <div id="notification-component" data-user-id="0"></div>
 {% endif %}
+<script>
+    (function() {
+        var darkMode = localStorage.getItem('darkMode');
+        if (darkMode === 'enabled') {
+            document.documentElement.classList.add('dark-mode');
+            document.body.classList.add('dark-mode');
+        }
+    })();
+</script>
+<script src="{% static 'js/theme.js' %}"></script>
 
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-messaging.js"></script>
@@ -134,25 +144,68 @@
     </script>
 
 </head>
-<body style="background-color: #EEFAFF;">
+<body style="">
     <div class="container mt-4">
         {% block content %}
         {% endblock %}
     </div>
-    <script src="
-    https://cdn.jsdelivr.net/npm/sweetalert2@11.14.1/dist/sweetalert2.all.min.js
-    "></script>
-        <script>
-        {% if messages %}
-            {% for message in messages %}
-                Swal.fire({
-                    icon: "{{ message.tags }}",
-                    title: "{{ message.tags|title }}",
-                    text: "{{ message }}"
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.14.1/dist/sweetalert2.all.min.js"></script>
+<script>
+    // Function to check if dark mode is active
+    function isDarkModeActive() {
+        
+        
+        // Check for dark mode localStorage setting
+        if (localStorage.getItem('darkMode') === 'enabled') {
+            return true;
+        }
+       
+        
+        // If none of the above conditions are met, dark mode is not active
+        return false;
+    }
+
+    // Function to get SweetAlert2 theme based on dark mode state
+    function getSwalTheme() {
+        return isDarkModeActive() ? 'dark' : 'light';
+    }
+
+    {% if messages %}
+        {% for message in messages %}
+            Swal.fire({
+                icon: "{{ message.tags }}",
+                title: "{{ message.tags|title }}",
+                text: "{{ message }}",
+                background: isDarkModeActive() ? '#333' : '#fff',
+                color: isDarkModeActive() ? '#fff' : '#545454',
+               
+                showConfirmButton: true,
+                timer: 10000,
+                timerProgressBar: true,
+                didOpen: (toast) => {
+                    toast.addEventListener('mouseenter', Swal.stopTimer)
+                    toast.addEventListener('mouseleave', Swal.resumeTimer)
+                }
+            });
+        {% endfor %}
+    {% endif %}
+
+    // Set up a MutationObserver to watch for changes to the body's class list
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                // Update SweetAlert2 theme when dark mode changes
+                Swal.setDefaults({
+                    background: isDarkModeActive() ? '#333' : '#fff',
+                    color: isDarkModeActive() ? '#fff' : '#545454'
                 });
-            {% endfor %}
-        {% endif %}
-    </script>  
+            }
+        });
+    });
+
+    // Start observing the body element for class changes
+    observer.observe(document.body, { attributes: true });
+</script>
 </body>
 </html>
 
