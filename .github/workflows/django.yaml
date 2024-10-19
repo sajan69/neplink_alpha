@@ -50,6 +50,8 @@ jobs:
     - name: Run Migrations
       env:
         SECRET_KEY: ${{ secrets.SECRET_KEY }}
+        EMAIL_HOST_USER: ${{ secrets.EMAIL_HOST_USER }}
+        EMAIL_HOST_PASSWORD: ${{ secrets.EMAIL_HOST_PASSWORD }}
         DB_NAME: ${{ secrets.DB_NAME }}
         DB_USER: ${{ secrets.DB_USER }}
         DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
@@ -66,7 +68,7 @@ jobs:
         CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
         CLOUDINARY_URL: ${{ secrets.CLOUDINARY_URL }}
         SITE_ID: ${{ secrets.SITE_ID }}
-        
+
       run: python manage.py migrate
 
     - name: Start Celery Worker
