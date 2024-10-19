@@ -136,8 +136,14 @@ CHANNEL_LAYERS = {
     },
 }
 
-CELERY_BROKER_URL = f'redis://{config('REDIS_HOST', default='127.0.0.1')}:{config('REDIS_PORT', default=6379, cast=int)}/0'
-CELERY_RESULT_BACKEND = f'redis://{config('REDIS_HOST', default='127.0.0.1')}:{config('REDIS_PORT', default=6379, cast=int)}/0'
+CELERY_BROKER_URL = 'redis://{}:{}/0'.format(
+    config('REDIS_HOST', default='127.0.0.1'),
+    config('REDIS_PORT', default=6379, cast=int)
+)
+CELERY_RESULT_BACKEND = 'redis://{}:{}/0'.format(
+    config('REDIS_HOST', default='127.0.0.1'),
+    config('REDIS_PORT', default=6379, cast=int)
+)
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
