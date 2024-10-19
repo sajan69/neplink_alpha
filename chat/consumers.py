@@ -3,6 +3,9 @@ import json
 import logging
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
+
+from accounts.services import NotificationService
+from chat.tasks import send_chat_notification
 from .models import CallLog, ChatRoom, Message
 from django.contrib.auth import get_user_model
 from datetime import datetime
@@ -37,10 +40,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
             await self.handle_file_share(data)
 
     async def handle_message(self, data):
-        message = data['message']
+        message_content = data['message']
         user_id = data['user_id']
 
-        message = await self.save_message(user_id, self.room_id, message)
+        message = await self.save_message(user_id, self.room_id, message_content)
 
         await self.channel_layer.group_send(
             self.room_group_name,
@@ -118,10 +121,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
 
     @database_sync_to_async
-    def save_message(self, user_id, room_id, message):
+    def save_message(self, user_id, room_id, message_content):
         user = User.objects.get(id=user_id)
         room = ChatRoom.objects.get(id=room_id)
-        return Message.objects.create(sender=user, room=room, content=message)
+        message = Message.objects.create(sender=user, room=room, content=message_content)
+        # Send notifications asynchronously
+        # for participant_id in room.participants.exclude(id=user_id).values_list('id', flat=True):
+        #     print(participant_id)
+        #     send_chat_notification.delay(participant_id, room_id, message_content, user.username)
+        
+        return message
 
 class CallConsumer(AsyncWebsocketConsumer):
     async def connect(self):

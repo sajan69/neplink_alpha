@@ -18,6 +18,7 @@ from accounts.views import (
     mark_all_notifications_read,
     mark_notification_read,
     UserSettingsView,
+    APIDocumentationView,
 )
  
 app_name = 'accounts'
@@ -40,7 +41,7 @@ urlpatterns = [
     path('notifications/mark-all-read/', mark_all_notifications_read, name='mark_all_read'),
     path('notifications/mark-read/<int:notification_id>/', mark_notification_read, name='mark_read'),
     path('settings/', UserSettingsView.as_view(), name='user_settings'),
-
+    path('api-docs/', APIDocumentationView.as_view(), name='api_docs'),
     ]
 
 

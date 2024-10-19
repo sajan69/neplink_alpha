@@ -550,3 +550,17 @@ def mark_all_notifications_read(request):
 
 
 
+from django.views.generic import TemplateView
+from django.utils.safestring import mark_safe
+import markdown2
+
+class APIDocumentationView(TemplateView):
+    template_name = 'api_documentation.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        with open('api_docs.md', 'r') as file:
+            markdown_content = file.read()
+        html_content = markdown2.markdown(markdown_content)
+        context['api_docs'] = mark_safe(html_content)
+        return context

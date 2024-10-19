@@ -136,14 +136,29 @@ CHANNEL_LAYERS = {
     },
 }
 
+CELERY_BROKER_URL = f'redis://{config('REDIS_HOST', default='127.0.0.1')}:{config('REDIS_PORT', default=6379, cast=int)}/0'
+CELERY_RESULT_BACKEND = f'redis://{config('REDIS_HOST', default='127.0.0.1')}:{config('REDIS_PORT', default=6379, cast=int)}/0'
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'Asia/Kathmandu'
+
+# Disable the broker connection retry
+CELERY_BROKER_CONNECTION_RETRY = False
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = False
+
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
 if DEBUG:
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': 'neplink',
+            'USER': 'admin',
+            'PASSWORD': 'pass',
+            'HOST': 'localhost',
+            'PORT': '5432',
         }
     }
 else:

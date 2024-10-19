@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    .api-docs {
+        font-family: Arial, sans-serif;
+        line-height: 1.6;
+        color: #333;
+    }
+    .api-docs h1, .api-docs h2, .api-docs h3 {
+        margin-top: 1.5em;
+        margin-bottom: 0.5em;
+    }
+    .api-docs code {
+        background-color: #f4f4f4;
+        padding: 2px 4px;
+        border-radius: 4px;
+    }
+    .api-docs pre {
+        background-color: #f4f4f4;
+        padding: 1em;
+        border-radius: 4px;
+        overflow-x: auto;
+    }
+</style>
+<div class="container mt-4">
+   
+    <div class="api-docs">
+        {{ api_docs }}
+    </div>
+</div>
+{% endblock %}

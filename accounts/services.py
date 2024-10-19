@@ -3,7 +3,7 @@ from push_notifications.models import GCMDevice
 from firebase_admin import messaging
 
 from django.contrib.contenttypes.models import ContentType 
-from accounts.models import Notification
+from accounts.models import Notification, User
 
 class NotificationService:
     @staticmethod
@@ -77,7 +77,6 @@ class NotificationService:
             A list of dictionaries containing the device registration ID and the response or error for each device.
         """
         devices = GCMDevice.objects.all()
-        print(devices)
 
         return NotificationService._send_to_devices(devices, title, body, link)
 
@@ -139,42 +138,15 @@ class NotificationService:
                     data={'link': link} if link else None
 
                 )
+                print(message)
                 response = messaging.send(message)
                 results.append({'device': device.registration_id, 'response': response})
             except Exception as e:
                 results.append({'device': device.registration_id, 'error': str(e)})
+        print(results)
         return results
     
-    @staticmethod
-    def send_otp(user, code):
-        """
-        Sends an OTP to the user's registered device.
-
-        Parameters:
-        -----------
-        user : User
-            The user to send the OTP to.
-        code : str
-            The OTP code to send.
-        title: str
-            The title of the notification.
-        body: str
-            The body of the notification
-        """
-        device = GCMDevice.objects.filter(user=user, active=True).first()
-        if device:
-            message = messaging.Message(
-                notification=messaging.Notification(
-                    title="OTP Verification",
-                    body=f"Your OTP is: {code}",
-                ),
-                token=device.registration_id,
-                data={'code': code}
-            )
-            messaging.send(message)
-        else:
-            raise ValueError("User has no active device to send OTP to.")
-        
+  
     @staticmethod
     def send_notification_to_userids(title, body, userids, link=None):
         """
@@ -202,46 +174,7 @@ class NotificationService:
             NotificationService.store_notification(userid, title, body, link)
         return results
     
-    @staticmethod
-    def send_notification_to_user_type(user_type, title, body, link=None):
-        """
-        Send a notification to all users of a specific user type.
-        
-        Parameters:
-        -----------
-        user_type : str
-            The user type (customer, vendor, or service_provider).
-        title : str
-            The title of the notification.
-        body : str
-            The body of the notification.
-        link : str, optional
-            The link included in the notification.
-        """
-        user_model_map = {
-            'customer': 'CivilCustomer',
-            'vendor': 'CivilVendor',
-            'service_provider': 'CivilServiceProvider'
-        }
-        
-        # Fetch users based on the user type
-        user_model = user_model_map.get(user_type)
-        if not user_model:
-            raise ValueError("Invalid user type")
-
-        # Fetch all users of the specified user type
-        users = ContentType.objects.get(model=user_model.lower()).model_class().objects.all()
-        user_ids = [user.id for user in users]
-        
-        # Send notification
-        devices = GCMDevice.objects.filter(user__id__in=user_ids)
-        print(f'Sending notification to {len(devices)} devices') 
-        NotificationService._send_to_devices(devices, title, body, link)
-
-        # Store the notification in the Notification model for each user
-        for user_id in user_ids:
-            NotificationService.store_notification(user_id, title, body, link)
-
+  
     @staticmethod
     def send_notification_to_userids_admin(title, body, userids, link=None):
         """
@@ -269,8 +202,38 @@ class NotificationService:
     
     
 
-    
+    @staticmethod
+    def send_post_notification(action, user_id, target_user_id, post_id, content=None):
+        username = User.objects.get(id=user_id).username
+        actions = {
+            'like_post': (f"{username} liked your post", f"{username} liked your post"),
+            'like_comment': (f"{username} liked your comment", f"{username} liked your comment" + (f": {content[:50]}..." if content else "")),
+            'add_comment': (f"{username} commented on your post", f"{username} commented" + (f": {content[:50]}..." if content else "")),
+            'share_post': (f"{username} shared your post", f"{username} shared your post"),
+            'like_reply': (f"{username} liked your reply", f"{username} liked your reply" + (f": {content[:50]}..." if content else "")),
+            'add_reply': (f"{username} replied to your comment", f"{username} replied" + (f": {content[:50]}..." if content else "")),
+            'tag_friend': (f"{username} tagged you in a post", f"{username} tagged you in a post" + (f": {content[:50]}..." if content else "")),
+        }
 
+        if action in actions:
+            title, body = actions[action]
+            link = f"/post/{post_id}/"  # Assuming this is the correct URL pattern
+            devices = GCMDevice.objects.filter(user__id=target_user_id)
+            
+            for device in devices:
+                try:
+                    message = messaging.Message(
+                        notification=messaging.Notification(title=title, body=body),
+                        data={'link': link},
+                        token=device.registration_id,
+                    )
+                    response = messaging.send(message)
+                    print(f"Notification sent successfully to device {device.id}: {response}")
+                except Exception as e:
+                    print(f"Error sending notification to device {device.id}: {str(e)}")
+
+            # Store notification in database
+            NotificationService.store_notification(target_user_id, title, body, link)
     @staticmethod
     def get_user_notifications(user_id, limit=20, offset=0):
         return Notification.objects.filter(user_id=user_id)[offset:offset+limit]

@@ -14,7 +14,7 @@ from accounts.services import NotificationService
 from django.db.models import Count
 import json
 from django.contrib.auth import get_user_model
-
+from post.tasks import send_post_notification
 from django.shortcuts import redirect
 from django.contrib import messages
 
@@ -69,12 +69,7 @@ class PostManagementView(LoginRequiredMixin, View):
         else:
             messages.success(request, 'Post liked successfully')
             if post.user != request.user:
-                NotificationService.send_notification_to_userids(
-                    f"{request.user.username} liked your post",
-                    f"{request.user.username} liked your post: {post.caption[:50]}...",
-                    [post.user.id],
-                    reverse('post:post_detail', args=[post.id])
-                )
+                NotificationService.send_post_notification('like_post', request.user.id, post.user.id, post.id)
         return redirect(request.META.get('HTTP_REFERER', 'accounts:home'))
 
     def like_comment(self, request, post):
