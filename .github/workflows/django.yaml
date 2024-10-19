@@ -55,6 +55,18 @@ jobs:
         DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
         DB_HOST: ${{ secrets.DB_HOST }}
         DB_PORT: ${{ secrets.DB_PORT }}
+        REDIS_HOST: ${{ secrets.REDIS_HOST }}
+        REDIS_PORT: ${{ secrets.REDIS_PORT }}
+        AGORA_APP_ID: ${{ secrets.AGORA_APP_ID }}
+        AGORA_APP_CERTIFICATE: ${{ secrets.AGORA_APP_CERTIFICATE }}
+        GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+        GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+        CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+        CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+        CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+        CLOUDINARY_URL: ${{ secrets.CLOUDINARY_URL }}
+        SITE_ID: ${{ secrets.SITE_ID }}
+        
       run: python manage.py migrate
 
     - name: Start Celery Worker
