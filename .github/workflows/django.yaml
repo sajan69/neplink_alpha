@@ -28,7 +28,7 @@ jobs:
       redis:
         image: redis
         ports:
-          - ${{ secrets.REDIS_PORT }}:${{ secrets.REDIS_PORT }}
+            - 6379:6379
 
     steps:
     - uses: actions/checkout@v4
