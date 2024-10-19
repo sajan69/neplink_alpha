@@ -6,13 +6,15 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.core.mail import send_mail
-
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.contrib.auth.tokens import default_token_generator
 
 from accounts.services import NotificationService
 from chat.models import ChatRoom
 from friends.models import FriendRequest, Friendship
 from post.models import CommentReply, PostMedia, SelectedFriend, UserTagSettings
-from .models import Notification, User
+from .models import Notification, User, OTP
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.views.decorators.http import require_POST
@@ -47,7 +49,6 @@ class UserLoginView(View):
             login(request, user, backend='django.contrib.auth.backends.ModelBackend')
             return redirect('accounts:home')
         return render(request, self.template_name, messages.error(request, 'Invalid credentials')) 
-
 class PasswordResetView(View):
     template_name = 'accounts/password_reset.html'
 
@@ -56,14 +57,20 @@ class PasswordResetView(View):
 
     def post(self, request):
         email = request.POST.get('email')
-        otp = "123456"  # Replace with actual OTP generation logic
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            messages.error(request, "No user found with this email address.")
+            return render(request, self.template_name)
+
+        otp = OTP.generate_otp(user)
         send_mail(
             'Password Reset OTP',
-            f'Your OTP is {otp}',
+            f'Your OTP is {otp.code}',
             'from@example.com',
             [email],
         )
-        request.session['email'] = email
+        request.session['reset_email'] = email
         return redirect('accounts:otp_verify')
 
 class OTPVerificationView(View):
@@ -74,29 +81,62 @@ class OTPVerificationView(View):
 
     def post(self, request):
         otp = request.POST.get('otp')
-        if otp == "123456":  # Check OTP
-            return redirect('accounts:password_reset_confirm')
-        return render(request, self.template_name, {'error': 'Invalid OTP'})
-    
+        email = request.session.get('reset_email')
+        if not email:
+            messages.error(request, "Session expired. Please start the password reset process again.")
+            return redirect('accounts:password_reset')
 
+        try:
+            user = User.objects.get(email=email)
+            otp_instance = OTP.objects.filter(user=user, code=otp).latest('created_at')
+            if otp_instance.is_valid():
+                uid = urlsafe_base64_encode(force_bytes(user.pk))
+                token = default_token_generator.make_token(user)
+                return redirect('accounts:password_reset_confirm', uidb64=uid, token=token)
+            else:
+                messages.error(request, "Invalid or expired OTP.")
+        except (User.DoesNotExist, OTP.DoesNotExist):
+            messages.error(request, "Invalid OTP.")
+
+        return render(request, self.template_name)
 
 class PasswordResetConfirmView(View):
     template_name = 'accounts/password_reset_confirm.html'
 
-    def get(self, request):
-        return render(request, self.template_name)
+    def get(self, request, uidb64, token):
+        try:
+            uid = force_str(urlsafe_base64_decode(uidb64))
+            user = User.objects.get(pk=uid)
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            user = None
 
-    def post(self, request):
-        password1 = request.POST.get('password1')
-        password2 = request.POST.get('password2')
-        if password1 != password2:
-            return render(request, self.template_name, {'error': 'Passwords do not match'})
-        
-        email = request.session.get('email')
-        user = User.objects.get(email=email)
-        user.set_password(password1)
-        user.save()
-        return redirect('accounts:login')
+        if user is not None and default_token_generator.check_token(user, token):
+            return render(request, self.template_name)
+        else:
+            messages.error(request, "The password reset link is invalid or has expired.")
+            return redirect('accounts:password_reset')
+
+    def post(self, request, uidb64, token):
+        try:
+            uid = force_str(urlsafe_base64_decode(uidb64))
+            user = User.objects.get(pk=uid)
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            user = None
+
+        if user is not None and default_token_generator.check_token(user, token):
+            password1 = request.POST.get('password1')
+            password2 = request.POST.get('password2')
+            if password1 != password2:
+                messages.error(request, "Passwords do not match.")
+                return render(request, self.template_name)
+            
+            user.set_password(password1)
+            user.save()
+            messages.success(request, "Your password has been reset successfully.")
+            return redirect('accounts:login')
+        else:
+            messages.error(request, "The password reset link is invalid or has expired.")
+            return redirect('accounts:password_reset')
 
 class UserPasswordChangeView(View):
     template_name = 'accounts/password_change.html'
@@ -132,6 +172,7 @@ from post.models import Post, Comment, CommentReply, Like, PostMedia
 from django.db import transaction
 from django.db.models import Q
 from django.db import models
+from django.template.loader import render_to_string
 class HomeView(LoginRequiredMixin, ListView):
     model = Post
     template_name = 'accounts/home.html'
@@ -159,6 +200,15 @@ class HomeView(LoginRequiredMixin, ListView):
         context['friends'] = Friendship.objects.filter(user=self.request.user).select_related('friend')
 
         return context
+    
+    def render_to_response(self, context, **response_kwargs):
+        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            posts_html = render_to_string('post/post_list.html', {'posts': context['posts']}, request=self.request)
+            return JsonResponse({
+                'html': posts_html,
+                'has_next': context['page_obj'].has_next(),
+            })
+        return super().render_to_response(context, **response_kwargs)
     
     def post(self, request, *args, **kwargs):
         caption = request.POST.get('caption')
@@ -249,6 +299,7 @@ class ProfileView(LoginRequiredMixin, DetailView):
     model = User
     template_name = 'accounts/profile.html'
     context_object_name = 'user'
+    paginate_by = 10
     
 
     def get_object(self):
@@ -309,21 +360,44 @@ class ProfileView(LoginRequiredMixin, DetailView):
         elif not context['is_own_profile']:
             context['action'] = 'add_friend'
 
-        # Fetch and paginate posts
+         # Fetch and paginate posts
         posts = Post.objects.filter(user=viewed_user).order_by('-created_at')
-        context['posts'] = posts 
+        posts_paginator = Paginator(posts, self.paginate_by)
+        posts_page = posts_paginator.get_page(self.request.GET.get('posts_page', 1))
+        context['posts'] = posts_page
+
+        # Fetch and paginate tagged posts
         tag_settings, created = UserTagSettings.objects.get_or_create(user=viewed_user)
         if tag_settings.show_tagged_posts:
             tagged_posts = viewed_user.tagged_posts.all().order_by('-created_at')
-            context['tagged_posts'] = tagged_posts
-            print(tagged_posts)
+            tagged_posts_paginator = Paginator(tagged_posts, self.paginate_by)
+            tagged_posts_page = tagged_posts_paginator.get_page(self.request.GET.get('tagged_posts_page', 1))
+            context['tagged_posts'] = tagged_posts_page
 
         # Add mutual friends to the context
         context['mutual_friends'] = mutual_friends
 
         return context
 
+    def render_to_response(self, context, **response_kwargs):
+        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            posts_page = context['posts']
+            tagged_posts_page = context.get('tagged_posts')
 
+            if self.request.GET.get('posts_page'):
+                html = render_to_string('post/post_list.html', {'posts': posts_page}, request=self.request)
+                return JsonResponse({
+                    'html': html,
+                    'has_next': posts_page.has_next(),
+                })
+            elif self.request.GET.get('tagged_posts_page'):
+                html = render_to_string('post/post_list.html', {'posts': tagged_posts_page}, request=self.request)
+                return JsonResponse({
+                    'html': html,
+                    'has_next': tagged_posts_page.has_next(),
+                })
+
+        return super().render_to_response(context, **response_kwargs)
 
 # Edit profile view - Allows editing only if the user is viewing their own profile
 @method_decorator(login_required, name='dispatch')
@@ -431,14 +505,34 @@ class UserSettingsView(LoginRequiredMixin, UpdateView):
 
 def notifications_view(request):
     user = request.user
+    page_number = request.GET.get('page', 1)
     notifications = NotificationService.get_user_notifications(user.id)
     unread_count = NotificationService.get_unread_notification_count(user.id)
     
-
+    paginator = Paginator(notifications, 12)  # Show 12 notifications per page
+    page_obj = paginator.get_page(page_number)
+    
     context = {
-        'notifications': notifications,
+        'notifications': page_obj,
         'unread_count': unread_count
     }
+    
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        # If it's an AJAX request, return JSON data
+        notification_data = [{
+            'id': n.id,
+            'title': n.title,
+            'body': n.body,
+            'timestamp': n.timestamp.isoformat(),
+            'read': n.read,
+            'link': n.link
+        } for n in page_obj]
+        return JsonResponse({
+            'notifications': notification_data,
+            'has_next': page_obj.has_next(),
+            'next_page_number': page_obj.next_page_number() if page_obj.has_next() else None
+        })
+    
     return render(request, 'accounts/notifications.html', context)
 
 

@@ -37,7 +37,7 @@ class CommentInline(admin.TabularInline):
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'caption_preview', 'feeling', 'visibility', 'is_shared', 'created_at', 'likes_count', 'comments_count', 'tagged_users_count')
-    list_filter = ('feeling', 'visibility', 'is_shared', 'created_at')
+    list_filter = ('feeling', 'visibility', 'is_shared', 'created_at','user__username')
     search_fields = ('user__username', 'caption', 'tagged_users__username')
     autocomplete_fields = ['user', 'shared_post', 'tagged_users']
     readonly_fields = ('created_at', 'updated_at', 'likes_count', 'comments_count', 'shares_count')

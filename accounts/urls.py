@@ -25,8 +25,9 @@ urlpatterns = [
     path('register/', UserRegisterView.as_view(), name='register'),
     path('login/', UserLoginView.as_view(), name='login'),
     path('password-reset/', PasswordResetView.as_view(), name='password_reset'),
-    path('otp-verify/', OTPVerificationView.as_view(), name='otp_verify'),
-    path('password-change/', UserPasswordChangeView.as_view(), name='password_change'),
+    path('password-reset/otp-verify/', OTPVerificationView.as_view(), name='otp_verify'),
+    path('password-reset/confirm/<uidb64>/<token>/', PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
+    
     path('', HomeView.as_view(), name='home'),
     path('logout/', logout_view, name='logout'),
     path('password-reset-confirm/', PasswordResetConfirmView.as_view(), name='password_reset_confirm'),

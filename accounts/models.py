@@ -2,7 +2,8 @@
 from django.utils import timezone
 from django.contrib.auth.models import AbstractUser
 from django.db import models
-
+import random
+import string
 from django.utils import timezone
 from django.contrib.auth.models import AbstractUser
 from django.db import models
@@ -75,4 +76,25 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"{self.title} - { self.user.username if self.user else self.user_type }"
+    
+class OTP(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    code = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+
+    @classmethod
+    def generate_otp(cls, user):
+        # Generate a random 6-digit OTP
+        otp = ''.join(random.choices(string.digits, k=6))
+        
+        # Set expiration time to 10 minutes from now
+        expires_at = timezone.now() + timezone.timedelta(minutes=10)
+        
+        # Create and save the OTP instance
+        otp_instance = cls.objects.create(user=user, code=otp, expires_at=expires_at)
+        return otp_instance
+
+    def is_valid(self):
+        return timezone.now() <= self.expires_at
  

@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const fileInput = document.getElementById('files-{{ post.id }}');
     const filePreview = document.getElementById('filePreview-{{ post.id }}');
     const maxFiles = 5;
-
+    console.log(visibilitySelect);
     visibilitySelect.addEventListener('change', function() {
         if (this.value === 'selected') {
             selectedFriendsContainer.style.display = 'block';

@@ -59,7 +59,6 @@
         <!-- Middle Column -->
         <div class="col-md-8">
             <!-- Post Creation Form -->
-            <!-- Post Creation Form -->
             <div class="card mb-4">
                 <div class="card-body">
                     <form method="post" enctype="multipart/form-data" id="postForm">
@@ -149,17 +148,24 @@
                 </div>
             </div>
             <!-- Posts Feed -->
-            {% for post in posts %}
-                {% include 'post/post_card.html' with post=post %}
-            {% empty %}
-                <p>No posts yet.</p>
-            {% endfor %}
+            
+            <div id="posts-container">
+                
+                {% include 'post/post_list.html' %}
+            </div>
+            
+            <!-- Loading spinner -->
+            <div id="loading-spinner" class="text-center d-none">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
         </div>
         
     
         
         <!-- Right Column -->
-        <div class="col-md-4 d-none d-md-block">
+        <div class="col-md-4 d-none d-md-block" style="position: sticky; top: 0; right: 0; bottom: 0; overflow-y: auto; padding-top:10px;height: 100vh;">
             <!-- User Profile Card -->
             <a href="{% url 'accounts:profile' user.username %}" class="card mb-4 text-decoration-none text-dark">
                 <div class="card-body d-flex align-items-center">
@@ -229,7 +235,51 @@
 </div>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const postsContainer = document.getElementById('posts-container');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        let currentPage = 1;
+        let loading = false;
+    
+        function loadMorePosts() {
+            if (loading) return;
+            loading = true;
+            loadingSpinner.classList.remove('d-none');
+    
+            const nextPage = currentPage + 1;
+            fetch(`?page=${nextPage}`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                postsContainer.insertAdjacentHTML('beforeend', data.html);
+                currentPage = nextPage;
+                loading = false;
+                loadingSpinner.classList.add('d-none');
+    
+                if (!data.has_next) {
+                    window.removeEventListener('scroll', handleScroll);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                loading = false;
+                loadingSpinner.classList.add('d-none');
+            });
+        }
+    
+        function handleScroll() {
+            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 200) {
+                loadMorePosts();
+            }
+        }
+    
+        window.addEventListener('scroll', handleScroll);
+    });
+    </script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const postForm = document.getElementById('postForm');
@@ -341,4 +391,5 @@
         }
     });
     </script>
+   
     {% endblock %}

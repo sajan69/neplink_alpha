@@ -4,7 +4,7 @@ from django.contrib import admin
 from django import forms
 
 from accounts.services import NotificationService
-from .models import Notification, User
+from .models import Notification, User, OTP
 from friends.models import Friendship
 from post.models import UserTagSettings
 from django.utils.html import format_html
@@ -135,4 +135,21 @@ class NotificationAdmin(admin.ModelAdmin):
         }),
     )
 
+@admin.register(OTP)
+class OTPAdmin(admin.ModelAdmin):
+    list_display = ('user', 'code', 'created_at', 'expires_at')
+    search_fields = ('user__username', 'code')
+    list_filter = ('created_at', 'expires_at')
+    readonly_fields = ('created_at', 'expires_at')
+
+    def user_link(self, obj):
+        url = reverse("admin:accounts_user_change", args=[obj.user.id])
+        return format_html('<a href="{}">{}</a>', url, obj.user.username)
+    user_link.short_description = 'User'
+
+    def code_link(self, obj):
+        return format_html('<a href="{}">{}</a>', obj.code, obj.code)
+    code_link.short_description = 'Code'
+
+    
 

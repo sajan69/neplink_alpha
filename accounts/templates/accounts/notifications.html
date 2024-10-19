@@ -29,8 +29,11 @@
             </ul>
         </div>
     </div>
-
-    
+    <div id="loadingSpinner" class="text-center mt-3 d-none">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
 </div>
 
 <style>
@@ -51,7 +54,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const notificationList = document.getElementById('notificationList');
     const markAllAsReadBtn = document.getElementById('markAllAsRead');
     const unreadCountBadge = document.getElementById('unreadCount');
-    const paginationControls = document.getElementById('paginationControls');
+    const loadingSpinner = document.getElementById('loadingSpinner');
+    let currentPage = 1;
+    let loading = false;
 
     // Function to get CSRF token
     function getCookie(name) {
@@ -103,6 +108,78 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error:', error);
         });
     }
+
+    // Load more notifications
+    function loadMoreNotifications() {
+        if (loading) return;
+        loading = true;
+        loadingSpinner.classList.remove('d-none');
+
+        fetch(`/notifications/?page=${currentPage + 1}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            data.notifications.forEach(notification => {
+                const li = document.createElement('li');
+                li.className = `list-group-item notification-item ${notification.read ? 'read' : ''}`;
+                li.setAttribute('role', 'button');
+                li.setAttribute('data-notification-id', notification.id);
+                li.innerHTML = `
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-0">${notification.title}</h6>
+                            <p class="mb-0 text-muted">${notification.body}</p>
+                            <small class="text-muted">${timeSince(new Date(notification.timestamp))} ago</small>
+                        </div>
+                        ${notification.link ? `<a href="${notification.link}" class="btn btn-sm btn-outline-primary ms-2">View</a>` : ''}
+                    </div>
+                `;
+                notificationList.appendChild(li);
+            });
+
+            currentPage++;
+            loading = false;
+            loadingSpinner.classList.add('d-none');
+
+            if (!data.has_next) {
+                window.removeEventListener('scroll', handleScroll);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            loading = false;
+            loadingSpinner.classList.add('d-none');
+        });
+    }
+
+    // Handle scroll event
+    function handleScroll() {
+        if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 100) {
+            loadMoreNotifications();
+        }
+    }
+
+    // Time since function
+    function timeSince(date) {
+        const seconds = Math.floor((new Date() - date) / 1000);
+        let interval = seconds / 31536000;
+        if (interval > 1) return Math.floor(interval) + " years";
+        interval = seconds / 2592000;
+        if (interval > 1) return Math.floor(interval) + " months";
+        interval = seconds / 86400;
+        if (interval > 1) return Math.floor(interval) + " days";
+        interval = seconds / 3600;
+        if (interval > 1) return Math.floor(interval) + " hours";
+        interval = seconds / 60;
+        if (interval > 1) return Math.floor(interval) + " minutes";
+        return Math.floor(seconds) + " seconds";
+    }
+
+    // Add scroll event listener
+    window.addEventListener('scroll', handleScroll);
 
     // Handle click on individual notifications
     notificationList.addEventListener('click', function(e) {

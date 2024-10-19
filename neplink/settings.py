@@ -12,27 +12,25 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 import os
 from pathlib import Path
-from decouple import config
+from decouple import config, Csv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-# Quick-start development settings - unsuitable for production
-SECRET_KEY = config('SECRET_KEY') 
-DEBUG = config('DEBUG', default=False, cast=bool)  # Cast to boolean
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*').split(',')  # Split if there are multiple hosts
+SECRET_KEY = config('SECRET_KEY')
 
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = config('DEBUG', default=False, cast=bool)
 
+ALLOWED_HOSTS = ['*']
 
 # Application definition
 
 DEFAULT_APPS = [
-    # Django default apps
     'jazzmin',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -45,18 +43,19 @@ DEFAULT_APPS = [
 ]
 
 THIRD_PARTY_APPS = [
-    # Third-party apps
-    
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
     'channels',
     'push_notifications',
+    'rest_framework',
+    'rest_framework.authtoken',
+    'drf_yasg',
+    'django_filters',
 ]
 
 LOCAL_APPS = [
-    # Local apps
     'accounts',
     'chat',
     'friends',
@@ -65,8 +64,12 @@ LOCAL_APPS = [
 
 INSTALLED_APPS = DEFAULT_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
+if not DEBUG:
+    INSTALLED_APPS += ['cloudinary_storage', 'cloudinary']
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -78,16 +81,20 @@ MIDDLEWARE = [
     'accounts.middleware.UpdateLastActiveMiddleware',
 ]
 
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10,
+}
+
 AGORA_APP_ID = config('AGORA_APP_ID')
 AGORA_APP_CERTIFICATE = config('AGORA_APP_CERTIFICATE')
-
-import firebase_admin
-from firebase_admin import credentials
-
-
-cred_path = os.path.join(BASE_DIR, 'firebase_credentials.json')
-cred = credentials.Certificate(cred_path)
-firebase_admin.initialize_app(cred)
 
 ROOT_URLCONF = 'neplink.urls'
 
@@ -96,7 +103,7 @@ AUTH_USER_MODEL = 'accounts.User'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],  # Add this line
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -122,31 +129,46 @@ ASGI_APPLICATION = 'neplink.asgi.application'
 
 CHANNEL_LAYERS = {
     'default': {
-        'BACKEND': 'channels_redis.pubsub.RedisPubSubChannelLayer',
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
-            "hosts": [('127.0.0.1', 6379)],
+            "hosts": [(config('REDIS_HOST', default='127.0.0.1'), config('REDIS_PORT', default=6379, cast=int))],
         },
-    }
+    },
 }
-
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+if DEBUG:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': config('DB_NAME'),
+            'USER': config('DB_USER'),
+            'PASSWORD': config('DB_PASSWORD'),
+            'HOST': config('DB_HOST'),
+            'PORT': config('DB_PORT', default='5432'),
+            'OPTIONS': {
+                'sslmode': 'require',
+            }
+        }
+    }
 
+# Email configuration
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = config('EMAIL_HOST_USER') 
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD') 
-DEFAULT_FROM_EMAIL = config('EMAIL_HOST_USER')  
+EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
+EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
+EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
+EMAIL_HOST_USER = config('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default=EMAIL_HOST_USER)
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
@@ -166,7 +188,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 
@@ -178,20 +199,28 @@ USE_I18N = True
 
 USE_TZ = True
 
-
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles_build', 'static')
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles_build')
 
+if not DEBUG:
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-
-
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+# Media files configuration
 MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
+# Cloudinary configuration
+if not DEBUG:
+    CLOUDINARY_STORAGE = {
+        'CLOUD_NAME': config('CLOUDINARY_CLOUD_NAME'),
+        'API_KEY': config('CLOUDINARY_API_KEY'),
+        'API_SECRET': config('CLOUDINARY_API_SECRET')
+    }
+    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.RawMediaCloudinaryStorage'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
@@ -201,8 +230,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_URL = 'accounts:landing_page'
 LOGIN_REDIRECT_URL = 'accounts:home'
 
-
-SITE_ID = 2
+SITE_ID = config('SITE_ID', default=2, cast=int)
 
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
@@ -221,6 +249,14 @@ SOCIALACCOUNT_PROVIDERS = {
     }
 }
 
+# Firebase configuration
+FIREBASE_CREDENTIALS_PATH = config('FIREBASE_CREDENTIALS_PATH', default=os.path.join(BASE_DIR, 'firebase_credentials.json'))
+
+import firebase_admin
+from firebase_admin import credentials
+
+cred = credentials.Certificate(FIREBASE_CREDENTIALS_PATH)
+firebase_admin.initialize_app(cred)
 
 JAZZMIN_SETTINGS = {
     "site_title": "NepLink Admin",
@@ -247,7 +283,6 @@ JAZZMIN_SETTINGS = {
     "hide_apps": [],
     "hide_models": [],
     "order_with_respect_to": ["auth", "post", "post.Post", "post.Comment", "post.CommentReply"],
-   
     "icons": {
         "auth": "fas fa-users-cog",
         "accounts.User": "fas fa-user",
@@ -263,7 +298,6 @@ JAZZMIN_SETTINGS = {
         "chat.Message": "fas fa-envelope",
         "chat.ChatRoom": "fas fa-comments",
         "chat.CallLog": "fas fa-phone",
-
     },
     "default_icon_parents": "fas fa-chevron-circle-right",
     "default_icon_children": "fas fa-circle",
@@ -272,9 +306,7 @@ JAZZMIN_SETTINGS = {
     "custom_js": None,
     "show_ui_builder": True,
     "changeform_format": "horizontal_tabs",
-    "changeform_format_overrides": { "auth.group": "vertical_tabs"},
-    
-
+    "changeform_format_overrides": {"auth.group": "vertical_tabs"},
 }
 
 JAZZMIN_UI_TWEAKS = {
@@ -307,3 +339,15 @@ JAZZMIN_UI_TWEAKS = {
         "success": "btn-success"
     }
 }
+
+# Security settings for production
+if not DEBUG:
+    SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = 'DENY'

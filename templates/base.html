@@ -4,7 +4,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}NepLink-Alpha{% endblock %}</title>
+    <title>{% block title %}NepLink{% endblock %}</title>
+    <!-- Description: Provides a brief summary of the page content for search engines and social media previews -->
+    <meta name="description" content="NepLink - The social media platform for millennials and Gen Z that champions freedom of speech, inclusion, and authentic self-expression.">
+    
+    <!-- Keywords: Helps search engines understand the main topics of the page (less important for modern SEO) -->
+    <meta name="keywords" content="social media, freedom of speech, millennial, Gen Z, inclusion, authentic, self-expression, NepLink">
+    
+    <!-- Author: Specifies the author of the web page or content -->
+    <meta name="author" content="NepLink">
+    <link rel="author" href="https://sajanadhikari.com.np" />
+    <link rel="canonical" href="https://www.neplink.com" /> 
+    
+    <!-- Open Graph (OG) tags: Enhance the appearance of shared links on social media platforms -->
+    <meta property="og:title" content="NepLink - Express Yourself Freely">
+    <meta property="og:description" content="Join NepLink, the social platform where your voice matters. Connect, share, and express yourself without boundaries.">
+    <meta property="og:image" content="{% static 'img/neplink-og-image.jpg' %}">
+    <meta property="og:url" content="https://www.neplink.com">
+    <meta property="og:site_name" content="NepLink">
+    <meta property="og:type" content="website">
+    <meta property="og:see_also" content="https://www.neplink.com">
+    
+    <!-- Twitter Card tags: Customize how content appears when shared on Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="NepLink - Express Yourself Freely">
+    <meta name="twitter:description" content="Join NepLink, the social platform where your voice matters. Connect, share, and express yourself without boundaries.">
+    <meta name="twitter:image" content="{% static 'img/neplink-twitter-card.jpg' %}">
+    <meta name="twitter:site" content="@neplink">
+    <meta name="twitter:creator" content="@neplink">
+    
+    <!-- Favicon: Specifies the icon displayed in browser tabs and bookmarks -->
+    <link rel="icon" type="image/png" href="{% static 'img/logo.png' %}">
+    
+    <!-- Apple Touch Icon: Defines the icon used when adding the website to the home screen on iOS devices -->
+    <link rel="apple-touch-icon" href="{% static 'img/apple-touch-icon.png' %}">
+    
+    <!-- Theme Color: Sets the color of the browser's address bar on mobile devices -->
+    <meta name="theme-color" content="#4285f4">
+    
+    <!-- Web App Manifest: Provides information about the web application in a JSON file, enabling "Add to Home Screen" functionality -->
+    <link rel="manifest" href="{% static 'manifest.json' %}">
+    
+    <!-- Robots: Instructs search engine crawlers on how to index and follow links on the page -->
+    <meta name="robots" content="index, follow">
+    
+    <!-- Schema.org markup for Google+: Enhances search engine results -->
+    <meta itemprop="name" content="NepLink">
+    <meta itemprop="description" content="NepLink - The social media platform for millennials and Gen Z that champions freedom of speech, inclusion, and authentic self-expression.">
+    <meta itemprop="image" content="{% static 'img/logo.png' %}">
+    <!-- Viewport: Ensures proper rendering and touch zooming for all devices, especially mobile -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -29,119 +79,234 @@
 </script>
 <script src="{% static 'js/theme.js' %}"></script>
 
-    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-messaging.js"></script>
-    <script type="text/javascript">
-        var firebaseConfig = {
-            apiKey: "AIzaSyBSQZPpLOHznojHh9R_OaeHBjvr92CzLkg",
-            authDomain: "neplink.firebaseapp.com",
-            databaseURL: "https://neplink-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "neplink",
-            storageBucket: "neplink.appspot.com",
-            messagingSenderId: "424450153128",
-            appId: "1:424450153128:web:14068d82d2c5791891809d",
-            measurementId: "G-FW9V6B9SND"
-        };
-        firebase.initializeApp(firebaseConfig);
-    
-        const messaging = firebase.messaging();
-    
-       
-    
-        messaging.onMessage((payload) => {
-            console.log('Message received. ', payload);
-            const notificationOptions = {
-                body: payload.notification.body,
-                icon: '/firebase-logo.png'
-            };
-    
-            if (Notification.permission === 'granted') {
-                const notification = new Notification(payload.notification.title, notificationOptions);
-                notification.onclick = () => {
-                    console.log('Notification clicked');
-                };
+<script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-messaging.js"></script>
+<script type="text/javascript">
+    var firebaseConfig = {
+        apiKey: "AIzaSyBSQZPpLOHznojHh9R_OaeHBjvr92CzLkg",
+        authDomain: "neplink.firebaseapp.com",
+        projectId: "neplink",
+        storageBucket: "neplink.appspot.com",
+        messagingSenderId: "424450153128",
+        appId: "1:424450153128:web:14068d82d2c5791891809d",
+        measurementId: "G-FW9V6B9SND"
+    };
+    firebase.initializeApp(firebaseConfig);
+
+    const messaging = firebase.messaging();
+
+    // Browser detection
+    function detectBrowser() {
+        const userAgent = navigator.userAgent;
+        if ((navigator.brave && navigator.brave.isBrave && navigator.brave.isBrave()) || false) {
+            return 'Brave';
+        } else if (userAgent.indexOf("Firefox") > -1) {
+            return 'Firefox';
+        } else if (userAgent.indexOf("Chrome") > -1) {
+            if (userAgent.indexOf("OPR") > -1) {
+                return 'Opera';
             }
-    
-            document.getElementById('notification').innerText = payload.notification.body;
+            return 'Chrome';
+        } else if (userAgent.indexOf("Safari") > -1) {
+            return 'Safari';
+        } else {
+            return 'Other';
+        }
+    }
+
+    // Instructions for different browsers
+    const browserInstructions = {
+        'Brave': `
+            <p>To enable notifications in Brave:</p>
+            <ol>
+                <li>Go to Settings (three vertical dots in the top right)</li>
+                <li>Select Privacy and security</li>
+                <li>Scroll down to "Use Google services for push messaging"</li>
+                <li>Turn this option on</li>
+                <li>Refresh this page and try again</li>
+            </ol>
+        `,
+        'Firefox': `
+            <p>To enable notifications in Firefox:</p>
+            <ol>
+                <li>Click the menu button and select Options</li>
+                <li>Select Privacy & Security panel</li>
+                <li>Under Permissions, find Notifications</li>
+                <li>Click the Settings button</li>
+                <li>Find and select this website, then choose Allow</li>
+                <li>Refresh this page and try again</li>
+            </ol>
+        `,
+        'Chrome': `
+            <p>To enable notifications in Chrome:</p>
+            <ol>
+                <li>Click the lock icon in the address bar</li>
+                <li>Select Site settings</li>
+                <li>Find Notifications and set it to Allow</li>
+                <li>Refresh this page and try again</li>
+            </ol>
+        `,
+        'Opera': `
+            <p>To enable notifications in Opera:</p>
+            <ol>
+                <li>Click on the Opera menu (Opera icon in the top left)</li>
+                <li>Go to Settings</li>
+                <li>Click on Privacy & security</li>
+                <li>Scroll down to Notifications</li>
+                <li>Click on 'Manage exceptions...'</li>
+                <li>Add this website and set it to Allow</li>
+                <li>Refresh this page and try again</li>
+            </ol>
+        `,
+        'Safari': `
+            <p>To enable notifications in Safari:</p>
+            <ol>
+                <li>Click Safari > Preferences</li>
+                <li>Go to the Websites tab</li>
+                <li>Select Notifications on the left</li>
+                <li>Find this website in the list and select Allow</li>
+                <li>Refresh this page and try again</li>
+            </ol>
+            <p>Note: Safari on iOS doesn't support web push notifications.</p>
+        `,
+        'Other': `
+            <p>To enable notifications:</p>
+            <ol>
+                <li>Check your browser settings</li>
+                <li>Look for Notifications or Permissions settings</li>
+                <li>Ensure this website is allowed to send notifications</li>
+                <li>Refresh this page and try again</li>
+            </ol>
+        `
+    };
+
+    function showBrowserInstructions(browser) {
+        Swal.fire({
+            title: `Enable Notifications in ${browser}`,
+            html: browserInstructions[browser],
+            icon: 'info',
+            confirmButtonText: 'OK'
         });
-    
-        function registerDevice() {
-          console.log('Register Device function called.');
-          
-      
-          // Request permission for notifications
-          messaging.requestPermission()
+    }
+
+    function registerDevice() {
+        // console.log('Register Device function called.');
+
+        const browser = detectBrowser();
+        // console.log('Detected browser:', browser);
+
+        if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+            // console.log('Push notifications are not supported in this browser');
+            Swal.fire({
+                title: 'Notifications Not Supported',
+                text: 'Your browser does not support push notifications. Please try a different browser.',
+                icon: 'warning',
+                confirmButtonText: 'OK'
+            });
+            return;
+        }
+
+        if (Notification.permission === 'denied') {
+            // console.log('Notification permission has been denied');
+            showBrowserInstructions(browser);
+            return;
+        }
+
+        messaging.requestPermission()
             .then(() => {
-                console.log('Notification permission granted.');
+                // console.log('Notification permission granted.');
                 return messaging.getToken();
             })
             .then(token => {
-                console.log('Notification permission granted. Token:', token);
+                // console.log('Notification permission granted. Token:', token);
                 if (token) {
                     // Set the device token as a cookie
                     document.cookie = `X-Device-ID=${token};path=/`;
-                    console.log('Device token set as cookie:', document.cookie);
-      
+                    // console.log('Device token set as cookie:', document.cookie);
+
                     // Get the user ID from the notification component
                     const notificationComponent = document.getElementById('notification-component');
-                    console.log('Notification component:', notificationComponent);
+                    // console.log('Notification component:', notificationComponent);
                     const userId = notificationComponent ? notificationComponent.dataset.userId : null;
-                    console.log('User ID:', userId);
-      
+                    // console.log('User ID:', userId);
+
                     // Get the CSRF token from the cookie
                     const getCookie = (name) => {
-                      let cookieValue = null;
-                      if (document.cookie && document.cookie !== '') {
-                        const cookies = document.cookie.split(';');
-                        for (let i = 0; i < cookies.length; i++) {
-                          const cookie = cookies[i].trim();
-                          if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                            break;
-                          }
+                        let cookieValue = null;
+                        if (document.cookie && document.cookie !== '') {
+                            const cookies = document.cookie.split(';');
+                            for (let i = 0; i < cookies.length; i++) {
+                                const cookie = cookies[i].trim();
+                                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                                    break;
+                                }
+                            }
                         }
-                      }
-                      return cookieValue;
+                        return cookieValue;
                     };
                     const csrftoken = getCookie('csrftoken');
-    
+
                     // Send token to server for registration
                     fetch('/register-device/', {
-                      method: 'POST',
-                      headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrftoken,  
-                      },
-                      body: JSON.stringify({ registration_id: token, user_id: userId !== "0" ? userId : null }),
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrftoken,
+                        },
+                        body: JSON.stringify({ registration_id: token, user_id: userId !== "0" ? userId : null }),
                     })
                     .then(response => {
-                        console.log('Server response:', response);
+                        // console.log('Server response:', response);
                         return response.json();
                     })
                     .then(data => {
-                        console.log('Registration response data:', data);
+                        // console.log('Registration response data:', data);
                     })
                     .catch(error => {
-                       console.error('Error during registration:', error);
+                        // console.error('Error during registration:', error);
                     });
                 }
             })
             .catch(error => {
-                console.error('Unable to get permission to notify.', error);
+                // console.error('Unable to get permission to notify.', error);
+                let errorMessage = 'An error occurred while setting up notifications.';
+                if (error.code === 'messaging/permission-blocked') {
+                    errorMessage = 'Notifications are blocked. Please enable them in your browser settings.';
+                } else if (error.code === 'messaging/unsupported-browser') {
+                    errorMessage = 'Your browser does not support push notifications.';
+                }
+                showBrowserInstructions(browser);
             });
-      }
-      
-    
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/firebase-messaging-sw.js')
-            .then((registration) => {
-                console.log('Service Worker registered with scope:', registration.scope);
-                registerDevice();
-            }).catch((error) => {
-                console.error('Service Worker registration failed:', error);
-            });
+    }
+
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/firebase-messaging-sw.js')
+        .then((registration) => {
+            // console.log('Service Worker registered with scope:', registration.scope);
+            registerDevice();
+        }).catch((error) => {
+            // console.error('Service Worker registration failed:', error);
+        });
+    }
+
+    messaging.onMessage((payload) => {
+        // console.log('Message received. ', payload);
+        const notificationOptions = {
+            body: payload.notification.body,
+            icon: 'static/img/logo.png'
+        };
+
+        if (Notification.permission === 'granted') {
+            const notification = new Notification(payload.notification.title, notificationOptions);
+            notification.onclick = () => {
+                // console.log('Notification clicked');
+            };
         }
-    </script>
+
+        document.getElementById('notification').innerText = payload.notification.body;
+    });
+</script>
 
 </head>
 <body style="">
@@ -153,23 +318,17 @@
 <script>
     // Function to check if dark mode is active
     function isDarkModeActive() {
-        
-        
         // Check for dark mode localStorage setting
         if (localStorage.getItem('darkMode') === 'enabled') {
             return true;
         }
-       
-        
         // If none of the above conditions are met, dark mode is not active
         return false;
     }
-
     // Function to get SweetAlert2 theme based on dark mode state
     function getSwalTheme() {
         return isDarkModeActive() ? 'dark' : 'light';
     }
-
     {% if messages %}
         {% for message in messages %}
             Swal.fire({

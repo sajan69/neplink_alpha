@@ -96,20 +96,27 @@
 
         resendBtn.on('click', function() {
             // Here you would typically make an AJAX call to resend the OTP
-            //ajax request to resend OTP
+            //ajax request to the otp verify url with the email syored i the cookie 
             $.ajax({
-                url: "#",
+                url: "{% url 'accounts:otp_verify' %}",
                 method: 'POST',
                 data: {
-                    csrfmiddlewaretoken: '{{ csrf_token }}'
+                    csrfmiddlewaretoken: '{{ csrf_token }}',
+                    email: '{{ email }}'
+                    
                 }
             });
 
             
 
 
-            // For this example, we'll just show an alert
-            alert('OTP resent. Please check your email/phone.');
+            // For this example, we'll just show an Swal.fire
+            Swal.fire({
+                title: 'OTP resent',
+                text: 'Please check your email/phone.',
+                icon: 'success',
+                confirmButtonText: 'OK'
+            });
             
             // Clear existing OTP inputs
             otpInputs.val('');
