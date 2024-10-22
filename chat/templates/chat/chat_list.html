@@ -29,33 +29,38 @@
                 </div>
                 <ul class="list-group list-group-flush">
                     {% for room in rooms %}
-                        <li class="list-group-item">
-                            <a href="{% url 'chat:chat_room' room.id %}" class="d-flex justify-content-between align-items-center text-decoration-none">
-                                <div class="d-flex align-items-center">
-                                    {% if room.is_group_chat %}
-                                        <i class="fas fa-users fa-2x mr-3 text-primary"></i>
-                                        <div>
-                                            <span class="font-weight-bold">{{ room.name }}</span>
-                                            <small class="text-muted d-block">Group Chat</small>
-                                        </div>
-                                    {% else %}
-                                        {% for participant in room.participants.all %}
-                                            {% if participant != request.user %}
-                                                <img src="{% if participant.profile_pic %}{{ participant.profile_pic.url }}{% else %}{% static 'img/default_profile_pic.png' %}{% endif %}
-                                                " alt="{{ participant.username }}" class="rounded-circle mr-3" style="width: 50px; height: 50px;">
-                                                <span class="font-weight-bold">{{ participant.username }}</span>
-                                                {% if participant.is_online %}
-                                                    <span class="badge bg-success ms-2">Online</span>
-                                                {% else %}
+                    <li class="list-group-item chat-room-{{ room.id }}">
+                        <a href="{% url 'chat:chat_room' room.id %}" class="d-flex justify-content-between align-items-center text-decoration-none">
+                            <div class="d-flex align-items-center">
+                                {% if room.is_group_chat %}
+                                    <i class="fas fa-users fa-2x mr-3 text-primary"></i>
+                                    <div>
+                                        <span class="font-weight-bold">{{ room.name }}</span>
+                                        <small class="text-muted d-block">Group Chat</small>
+                                    </div>
+                                {% else %}
+                                    {% for participant in room.participants.all %}
+                                        {% if participant != request.user %}
+                                            <img src="{% if participant.profile_pic %}{{ participant.profile_pic.url }}{% else %}{% static 'img/default_profile_pic.png' %}{% endif %}"
+                                                 alt="{{ participant.username }}" class="rounded-circle mr-3" style="width: 50px; height: 50px;">
+                                            <span class="font-weight-bold">{{ participant.username }}</span>
+                                            {% if participant.is_online %}
+                                                <span class="badge bg-success ms-2">Online</span>
+                                            {% else %}
                                                 <span class="badge bg-secondary ms-2">Last seen: {{ participant.last_online }}</span>
-                                                {% endif %}
                                             {% endif %}
-                                        {% endfor %}
-                                    {% endif %}
-                                </div>
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <span class="badge bg-primary rounded-pill me-2 chat-room-unread-badge" data-room-id="{{ room.id }}" style="display: {% if room.unread_count > 0 %}inline{% else %}none{% endif %};">
+                                    {{ room.unread_count }}
+                                </span>
                                 <i class="fas fa-chevron-right text-muted"></i>
-                            </a>
-                        </li>
+                            </div>
+                        </a>
+                    </li>
                     {% empty %}
                         <li class="list-group-item text-center text-muted">
                             <p class="mb-0">You have no active chats.</p>

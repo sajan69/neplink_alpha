@@ -248,52 +248,102 @@
 {% endif %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        function setupInfiniteScroll(containerId, loadingSpinnerId, pageParam) {
-            const container = document.getElementById(containerId);
-            const loadingSpinner = document.getElementById(loadingSpinnerId);
-            let currentPage = 1;
-            let loading = false;
-    
-            function loadMorePosts() {
-                if (loading) return;
-                loading = true;
-                loadingSpinner.classList.remove('d-none');
-    
-                const nextPage = currentPage + 1;
-                fetch(`?${pageParam}=${nextPage}`, {
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    container.insertAdjacentHTML('beforeend', data.html);
-                    currentPage = nextPage;
-                    loading = false;
-                    loadingSpinner.classList.add('d-none');
-    
-                    if (!data.has_next) {
-                        window.removeEventListener('scroll', handleScroll);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    loading = false;
-                    loadingSpinner.classList.add('d-none');
-                });
+        const postsContainer = document.getElementById('posts-container');
+        const taggedPostsContainer = document.getElementById('tagged-posts-container');
+        const postsLoadingSpinner = document.getElementById('posts-loading-spinner');
+        const taggedPostsLoadingSpinner = document.getElementById('tagged-posts-loading-spinner');
+        let currentPostsPage = 1;
+        let currentTaggedPostsPage = 1;
+        let loadingPosts = false;
+        let loadingTaggedPosts = false;
+        let hasMorePosts = {{ has_more_posts|yesno:"true,false" }};
+        let hasMoreTaggedPosts = {{ has_more_tagged_posts|yesno:"true,false" }};
+
+        function loadMorePosts(isTagged = false) {
+            const container = isTagged ? taggedPostsContainer : postsContainer;
+            const spinner = isTagged ? taggedPostsLoadingSpinner : postsLoadingSpinner;
+            const loading = isTagged ? loadingTaggedPosts : loadingPosts;
+            const hasMore = isTagged ? hasMoreTaggedPosts : hasMorePosts;
+            const currentPage = isTagged ? currentTaggedPostsPage : currentPostsPage;
+
+            if (loading || !hasMore) return;
+
+            if (isTagged) {
+                loadingTaggedPosts = true;
+            } else {
+                loadingPosts = true;
             }
-    
-            function handleScroll() {
-                if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 200) {
-                    loadMorePosts();
+            spinner.classList.remove('d-none');
+
+            const nextPage = currentPage + 1;
+            const pageParam = isTagged ? 'tagged_posts_page' : 'posts_page';
+            fetch(`?${pageParam}=${nextPage}`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.html && data.html.trim()) {
+                    container.insertAdjacentHTML('beforeend', data.html);
+                    if (isTagged) {
+                        currentTaggedPostsPage = nextPage;
+                        hasMoreTaggedPosts = data.has_more_posts;
+                    } else {
+                        currentPostsPage = nextPage;
+                        hasMorePosts = data.has_more_posts;
+                    }
+                } else {
+                    if (isTagged) {
+                        hasMoreTaggedPosts = false;
+                    } else {
+                        hasMorePosts = false;
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                if (isTagged) {
+                    hasMoreTaggedPosts = false;
+                } else {
+                    hasMorePosts = false;
+                }
+            })
+            .finally(() => {
+                if (isTagged) {
+                    loadingTaggedPosts = false;
+                } else {
+                    loadingPosts = false;
+                }
+                spinner.classList.add('d-none');
+                if (!hasMorePosts && !hasMoreTaggedPosts) {
+                    window.removeEventListener('scroll', handleScroll);
+                }
+            });
+        }
+
+        function handleScroll() {
+            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 200) {
+                if (hasMorePosts) {
+                    loadMorePosts(false);
+                }
+                if (hasMoreTaggedPosts) {
+                    loadMorePosts(true);
                 }
             }
-    
-            window.addEventListener('scroll', handleScroll);
         }
-    
-        setupInfiniteScroll('posts-container', 'posts-loading-spinner', 'posts_page');
-        setupInfiniteScroll('tagged-posts-container', 'tagged-posts-loading-spinner', 'tagged_posts_page');
+
+        if (hasMorePosts || hasMoreTaggedPosts) {
+            window.addEventListener('scroll', handleScroll);
+        } else {
+            postsLoadingSpinner.classList.add('d-none');
+            taggedPostsLoadingSpinner.classList.add('d-none');
+        }
     });
-    </script>
+</script>
 {% endblock %}

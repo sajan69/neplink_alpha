@@ -19,6 +19,14 @@ class ChatRoom(models.Model):
         else:
             other_user = self.participants.exclude(id=user.id).first()
             return other_user.username if other_user else self.name
+        
+    def unread_messages_count(self, user):
+        return self.messages.exclude(read_by=user).count()
+
+    def mark_messages_as_read(self, user):
+        unread_messages = self.messages.exclude(read_by=user)
+        for message in unread_messages:
+            message.read_by.add(user)
 
     def save(self, *args, **kwargs):
         # Save the instance first (to generate an ID)
@@ -43,9 +51,12 @@ class Message(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
     is_file = models.BooleanField(default=False)
     file = models.FileField(upload_to='chat_files/', null=True, blank=True)
-
+    read_by = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='read_messages', blank=True)
     class Meta:
         ordering = ['timestamp']
+
+    def mark_as_read(self, user):
+        self.read_by.add(user)
 
     def __str__(self):
         return f'{self.sender} - {self.room}'

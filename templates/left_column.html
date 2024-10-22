@@ -114,9 +114,9 @@
         </a>
         <a href="{% url 'chat:chat_list' %}" class="btn btn-link position-relative">
             <i class="fas fa-envelope fa-lg "></i>
-            {% if messages_count > 0 %}
+            {% if unread_messages_rooms_count > 0 %}
                 <span class="position-absolute top-10 start-90 translate-middle badge rounded-pill bg-danger">
-                    {{ messages_count }}
+                    {{ unread_messages_rooms_count }}
                     <span class="visually-hidden">unread messages</span>
                 </span>
             {% endif %}
@@ -134,7 +134,7 @@
         <nav class="nav flex-column" style="color: #3B454F; border-radius: 5px;">
             <a class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}" href="{% url "accounts:home" %}"><i class="fas fa-home me-2"></i> Home</a>
             <a class="nav-link {% if request.resolver_match.url_name == 'notifications' %}active{% endif %}" href="{% url "accounts:notifications" %}"><i class="fas fa-bell me-2"></i> Notifications<i class="badge bg-danger ms-2">{{ unread_count }}</i></a>
-            <a class="nav-link {% if request.resolver_match.url_name == 'chat_list' %}active{% endif %}" href="{% url 'chat:chat_list' %}"><i class="fas fa-envelope me-2"></i> Messages<i class="badge bg-danger ms-2">{{ messages_count }}</i></a>
+            <a class="nav-link {% if request.resolver_match.url_name == 'chat_list' %}active{% endif %}" href="{% url 'chat:chat_list' %}"><i class="fas fa-envelope me-2"></i> Messages<i class="badge bg-danger ms-2">{{ unread_messages_rooms_count }}</i></a>
             <a class="nav-link {% if request.resolver_match.url_name == 'friend_list' %}active{% endif %}" href="{% url 'friends:friend_list' %}"><i class="fas fa-users me-2"></i> Friends</a>
             <a class="nav-link {% if request.resolver_match.url_name == 'profile' and request.resolver_match.kwargs.username == request.user.username %}active{% endif %}" 
             href="{% url 'accounts:profile' request.user.username %}">  

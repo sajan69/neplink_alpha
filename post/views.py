@@ -69,7 +69,7 @@ class PostManagementView(LoginRequiredMixin, View):
         else:
             messages.success(request, 'Post liked successfully')
             if post.user != request.user:
-                NotificationService.send_post_notification('like_post', request.user.id, post.user.id, post.id)
+                NotificationService.send_notification_async('like_post', request.user.id, post.user.id, post.id)
         return redirect(request.META.get('HTTP_REFERER', 'accounts:home'))
 
     def like_comment(self, request, post):
@@ -82,12 +82,7 @@ class PostManagementView(LoginRequiredMixin, View):
         else:
             messages.success(request, 'Comment liked successfully')
             if comment.user != request.user:
-                NotificationService.send_notification_to_userids(
-                    f"{request.user.username} liked your comment",
-                    f"{request.user.username} liked your comment: {comment.text[:50]}...",
-                    [comment.user.id],
-                    reverse('post:post_detail', args=[post.id])
-                )
+                NotificationService.send_notification_async('like_comment', request.user.id, comment.user.id, post.id, comment.text)
         return redirect(request.META.get('HTTP_REFERER', 'accounts:home'))
 
     def add_comment(self, request, post):
@@ -96,12 +91,7 @@ class PostManagementView(LoginRequiredMixin, View):
             comment = Comment.objects.create(user=request.user, post=post, text=text)
             messages.success(request, 'Comment added successfully')
             if post.user != request.user:
-                NotificationService.send_notification_to_userids(
-                    f"{request.user.username} commented on your post",
-                    f"{request.user.username} commented: {text[:50]}...",
-                    [post.user.id],
-                    reverse('post:post_detail', args=[post.id])
-                )
+                NotificationService.send_notification_async('add_comment', request.user.id, post.user.id, post.id, comment.text)
         else:
             messages.error(request, 'Comment text is required')
         return redirect(request.META.get('HTTP_REFERER', 'accounts:home'))
@@ -192,12 +182,7 @@ class PostManagementView(LoginRequiredMixin, View):
 
         messages.success(request, 'Post shared successfully')
         if post.user != request.user:
-            NotificationService.send_notification_to_userids(
-                f"{request.user.username} shared your post",
-                f"{request.user.username} shared your post: {post.caption[:50]}...",
-                [post.user.id],
-                reverse('post:post_detail', args=[shared_post.id])
-            )
+            NotificationService.send_notification_async('share_post', request.user.id, post.user.id, post.id, post.caption)
         return redirect(request.META.get('HTTP_REFERER', 'accounts:home'))
 
     def like_reply(self, request, post):
@@ -210,12 +195,8 @@ class PostManagementView(LoginRequiredMixin, View):
         else:
             messages.success(request, 'Reply liked successfully')
             if reply.user != request.user:
-                NotificationService.send_notification_to_userids(
-                    f"{request.user.username} liked your reply",
-                    f"{request.user.username} liked your reply: {reply.text[:50]}...",
-                    [reply.user.id],
-                    reverse('post:post_detail', args=[post.id])
-                )
+                NotificationService.send_notification_async('like_reply', request.user.id, reply.user.id, post.id, reply.text)
+
         return redirect(request.META.get('HTTP_REFERER', 'accounts:home'))
 
     def add_reply(self, request, post):
@@ -226,12 +207,7 @@ class PostManagementView(LoginRequiredMixin, View):
             reply = CommentReply.objects.create(user=request.user, comment=comment, text=text)
             messages.success(request, 'Reply added successfully')
             if comment.user != request.user:
-                NotificationService.send_notification_to_userids(
-                    f"{request.user.username} replied to your comment",
-                    f"{request.user.username} replied: {text[:50]}...",
-                    [comment.user.id],
-                    reverse('post:post_detail', args=[post.id])
-                )
+                NotificationService.send_notification_async('add_reply', request.user.id, comment.user.id, post.id, text)
         else:
             messages.error(request, 'Reply text is required')
         return redirect(request.META.get('HTTP_REFERER', 'accounts:home'))
@@ -265,12 +241,7 @@ class PostManagementView(LoginRequiredMixin, View):
             tag_settings, created = UserTagSettings.objects.get_or_create(user=user)
             if tag_settings.allow_tagging:
                 post.tagged_users.add(user)
-                NotificationService.send_notification_to_userids(
-                    f"{request.user.username} tagged you in a post",
-                    f"{request.user.username} tagged you in a post: {post.caption[:50]}...",
-                    [user.id],
-                    reverse('post:post_detail', args=[post.id])
-                )
+                NotificationService.send_notification_async('tag_friend', request.user.id, user.id, post.id, post.caption)
         messages.success(request, 'Friends tagged successfully')
         return redirect(request.META.get('HTTP_REFERER', 'accounts:home'))
 

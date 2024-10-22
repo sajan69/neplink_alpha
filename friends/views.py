@@ -79,7 +79,7 @@ def send_friend_request(request, username):
     friend_request, created = FriendRequest.objects.get_or_create(from_user=request.user, to_user=to_user)
     if created:
         messages.success(request, f'Friend request sent to {to_user.username}.')
-        NotificationService.send_notification_to_userids('Friend Request', f'{request.user.username} sent you a friend request.', [to_user.id], '/friends/requests/')
+        NotificationService.send_notification_async('send_friend_request', request.user.id, to_user.id, None)
     else:
         messages.info(request, f'Friend request to {to_user.username} already sent.')
     return redirect('friends:user_search')
@@ -98,6 +98,7 @@ def accept_friend_request(request, request_id):
     Friendship.objects.create(user=friend_request.from_user, friend=request.user)
     friend_request.delete()
     messages.success(request, f'You are now friends with {friend_request.from_user.username}.')
+    NotificationService.send_notification_async('accept_friend_request', request.user.id, friend_request.from_user.id, None)
     return redirect('friends:friend_requests')
 
 @login_required

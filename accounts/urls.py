@@ -19,6 +19,7 @@ from accounts.views import (
     mark_notification_read,
     UserSettingsView,
     APIDocumentationView,
+    get_updated_counts,
 )
  
 app_name = 'accounts'
@@ -42,6 +43,7 @@ urlpatterns = [
     path('notifications/mark-read/<int:notification_id>/', mark_notification_read, name='mark_read'),
     path('settings/', UserSettingsView.as_view(), name='user_settings'),
     path('api-docs/', APIDocumentationView.as_view(), name='api_docs'),
+    path('get-updated-counts/', get_updated_counts, name='get_updated_counts'),
     ]
 
 

@@ -13,6 +13,8 @@ from friends.models import Friendship
 @login_required
 def chat_list(request):
     user_rooms = ChatRoom.objects.filter(participants=request.user)
+    for room in user_rooms:
+        room.unread_count = room.unread_messages_count(request.user)
     
     return render(request, 'chat/chat_list.html', {'rooms': user_rooms})
 
@@ -71,6 +73,7 @@ def chat_room(request, room_id):
     messages_info = room.messages.all()
     # room Participants excluding the logged in user
     room_participants = room.participants.exclude(id=request.user.id)
+    room.mark_messages_as_read(request.user)
     
     if not room.participants.filter(id=request.user.id).exists():
         messages.error(request, "You don't have access to this chat room.")

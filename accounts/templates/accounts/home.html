@@ -235,52 +235,69 @@
 </div>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const postsContainer = document.getElementById('posts-container');
         const loadingSpinner = document.getElementById('loading-spinner');
         let currentPage = 1;
         let loading = false;
-    
+        let hasMorePosts = {{ has_more_posts|yesno:"true,false" }};
+
         function loadMorePosts() {
-            if (loading) return;
+            if (loading || !hasMorePosts) return;
             loading = true;
             loadingSpinner.classList.remove('d-none');
-    
+
             const nextPage = currentPage + 1;
             fetch(`?page=${nextPage}`, {
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest'
                 }
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
             .then(data => {
-                postsContainer.insertAdjacentHTML('beforeend', data.html);
-                currentPage = nextPage;
-                loading = false;
-                loadingSpinner.classList.add('d-none');
-    
-                if (!data.has_next) {
-                    window.removeEventListener('scroll', handleScroll);
+                if (data.html && data.html.trim()) {
+                    postsContainer.insertAdjacentHTML('beforeend', data.html);
+                    currentPage = nextPage;
+                    hasMorePosts = data.has_more_posts;
+                } else {
+                    hasMorePosts = false;
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
+                hasMorePosts = false;
+            })
+            .finally(() => {
                 loading = false;
                 loadingSpinner.classList.add('d-none');
+                if (!hasMorePosts) {
+                    window.removeEventListener('scroll', handleScroll);
+                }
             });
         }
-    
+
         function handleScroll() {
-            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 200) {
+            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 200 && hasMorePosts) {
                 loadMorePosts();
             }
         }
-    
-        window.addEventListener('scroll', handleScroll);
+
+        if (hasMorePosts) {
+            window.addEventListener('scroll', handleScroll);
+        } else {
+            loadingSpinner.classList.add('d-none');
+        }
     });
-    </script>
-<script>
+</script>
+
+    <script>
     document.addEventListener('DOMContentLoaded', function() {
         const postForm = document.getElementById('postForm');
         const postOptions = document.getElementById('postOptions');

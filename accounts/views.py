@@ -198,15 +198,17 @@ class HomeView(LoginRequiredMixin, ListView):
         context['suggested_users'] = User.objects.filter(friends__user__friends__user=self.request.user).exclude(id=self.request.user.id).exclude(friends__user=self.request.user).exclude(friend_requests_received__from_user=self.request.user).exclude(friend_requests_sent__to_user=self.request.user).distinct()
         context['friend_requests'] = FriendRequest.objects.filter(to_user=self.request.user)
         context['friends'] = Friendship.objects.filter(user=self.request.user).select_related('friend')
+        context['has_more_posts'] = context['page_obj'].has_next()
 
         return context
     
     def render_to_response(self, context, **response_kwargs):
         if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            posts_html = render_to_string('post/post_list.html', {'posts': context['posts']}, request=self.request)
+            posts = context['posts']
+            posts_html = render_to_string('post/post_list.html', {'posts': posts}, request=self.request)
             return JsonResponse({
                 'html': posts_html,
-                'has_next': context['page_obj'].has_next(),
+                'has_more_posts': context['page_obj'].has_next(),
             })
         return super().render_to_response(context, **response_kwargs)
     
@@ -363,22 +365,26 @@ class ProfileView(LoginRequiredMixin, DetailView):
          # Fetch and paginate posts
         posts = Post.objects.filter(user=viewed_user).order_by('-created_at')
         posts_paginator = Paginator(posts, self.paginate_by)
-        posts_page = posts_paginator.get_page(self.request.GET.get('posts_page', 1))
+        posts_page_number = self.request.GET.get('posts_page', 1)
+        posts_page = posts_paginator.get_page(posts_page_number)
         context['posts'] = posts_page
+        context['has_more_posts'] = context['posts'].has_next()
 
         # Fetch and paginate tagged posts
         tag_settings, created = UserTagSettings.objects.get_or_create(user=viewed_user)
         if tag_settings.show_tagged_posts:
             tagged_posts = viewed_user.tagged_posts.all().order_by('-created_at')
             tagged_posts_paginator = Paginator(tagged_posts, self.paginate_by)
-            tagged_posts_page = tagged_posts_paginator.get_page(self.request.GET.get('tagged_posts_page', 1))
+            tagged_posts_page_number = self.request.GET.get('tagged_posts_page', 1)
+            tagged_posts_page = tagged_posts_paginator.get_page(tagged_posts_page_number)
             context['tagged_posts'] = tagged_posts_page
+            context['has_more_tagged_posts'] = context.get('tagged_posts', []).has_next() if 'tagged_posts' in context else False
 
         # Add mutual friends to the context
         context['mutual_friends'] = mutual_friends
 
         return context
-
+    
     def render_to_response(self, context, **response_kwargs):
         if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             posts_page = context['posts']
@@ -388,13 +394,13 @@ class ProfileView(LoginRequiredMixin, DetailView):
                 html = render_to_string('post/post_list.html', {'posts': posts_page}, request=self.request)
                 return JsonResponse({
                     'html': html,
-                    'has_next': posts_page.has_next(),
+                    'has_more_posts': context['posts'].has_next(),
                 })
             elif self.request.GET.get('tagged_posts_page'):
                 html = render_to_string('post/post_list.html', {'posts': tagged_posts_page}, request=self.request)
                 return JsonResponse({
                     'html': html,
-                    'has_next': tagged_posts_page.has_next(),
+                    'has_more_tagged_posts': context.get('tagged_posts', []).has_next() if 'tagged_posts' in context else False,
                 })
 
         return super().render_to_response(context, **response_kwargs)
@@ -564,3 +570,27 @@ class APIDocumentationView(TemplateView):
         html_content = markdown2.markdown(markdown_content)
         context['api_docs'] = mark_safe(html_content)
         return context
+    
+@login_required
+def get_updated_counts(request):
+    unread_count = NotificationService.get_unread_notification_count(request.user.id)
+    friend_requests_count = FriendRequest.objects.filter(to_user=request.user).count()
+    chat_rooms = ChatRoom.objects.filter(participants=request.user)
+    
+    messages_count = 0
+    chat_room_counts = {}
+    for room in chat_rooms:
+        unread_count = room.unread_messages_count(request.user)
+        messages_count += unread_count
+        if unread_count > 0:
+            chat_room_counts[room.id] = unread_count
+
+    unread_messages_rooms_count = len(chat_room_counts)
+
+    return JsonResponse({
+        'unread_count': unread_count,
+        'friend_requests_count': friend_requests_count,
+        'messages_count': messages_count,
+        'unread_messages_rooms_count': unread_messages_rooms_count,
+        'chat_room_counts': chat_room_counts,
+    })
