@@ -1,0 +1,39 @@
+{% extends 'auth_main.html' %}
+{% load static %}
+
+{% block content %}
+<div class="col-md-6 d-flex align-items-center justify-content-center p-5">
+    <div class="text-center">
+        <a href="{% url 'accounts:landing_page' %}">
+            <img src="{% static 'img/logo.png' %}" alt="NepLink Logo" class="img-fluid mb-4" style="max-width: 200px;">
+        </a>
+        <h1 class="display-4 mb-4" id="typing-title"></h1>
+        <p class="lead mb-5 d-none d-md-block" id="typing-text"></p>
+    </div>
+</div>
+<div class="col-md-6 bg-white p-5">
+    {% block auth_content %}
+    {% endblock %}
+</div>
+
+<script>
+    function typeWriter(text, elementId, speed) {
+        let i = 0;
+        function type() {
+            if (i < text.length) {
+                document.getElementById(elementId).innerHTML += text.charAt(i);
+                i++;
+                setTimeout(type, speed);
+            }
+        }
+        type();
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        typeWriter("Welcome to NepLink", "typing-title", 100);
+        setTimeout(() => {
+            typeWriter("Connect with friends, share moments, and explore new relationships.", "typing-text", 50);
+        }, 2000);
+    });
+</script>
+{% endblock %}

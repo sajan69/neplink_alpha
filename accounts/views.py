@@ -428,8 +428,10 @@ class ProfileEditView(UpdateView):
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
+
 class RegisterDeviceView(APIView):
+    permission_classes = [AllowAny]
     def post(self, request, *args, **kwargs):
         registration_id = request.data.get("registration_id")
         user_id = request.data.get("user_id")
@@ -439,10 +441,14 @@ class RegisterDeviceView(APIView):
 
         user = None
         if user_id:
-            try:
-                user = User.objects.get(id=user_id)
-            except User.DoesNotExist:
-                return Response({"error": "Invalid user_id"}, status=status.HTTP_400_BAD_REQUEST)
+            if user_id:
+                try:
+                    user = User.objects.get(id=user_id)
+                except User.DoesNotExist:
+                    user = None
+            else:
+                user = None
+                
 
         # Check if the device with the registration_id exists
         device = GCMDevice.objects.filter(registration_id=registration_id).first()

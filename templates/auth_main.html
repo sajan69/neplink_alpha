@@ -310,13 +310,165 @@
             setInterval(refreshToken, 1000 * 60 * 60); // Every hour
         }
     </script>
+    <style>
+        body {
+            background-image: url("{% static 'img/image.png' %}");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            height: 100vh;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .auth-container {
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            overflow: hidden;
+            width: 80%;
+            max-width: 1200px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        }
+        /* Dark mode styles for auth pages */
+body.dark-mode {
+    background-color: #121212;
+    color: #e0e0e0;
+}
+
+body.dark-mode .auth-container {
+    background-color: rgba(18, 18, 18, 0.9);
+}
+
+body.dark-mode .col-md-6.bg-white {
+    background-color: #1e1e1e !important;
+}
+
+body.dark-mode h1, 
+body.dark-mode h2, 
+body.dark-mode h3, 
+body.dark-mode h4, 
+body.dark-mode h5, 
+body.dark-mode h6 {
+    color: #ffffff;
+}
+
+body.dark-mode .form-label {
+    color: #b0b0b0;
+}
+
+body.dark-mode .form-control {
+    background-color: #2c2c2c;
+    border-color: #444;
+    color: #e0e0e0;
+}
+
+body.dark-mode .form-control:focus {
+    background-color: #3c3c3c;
+    border-color: #666;
+    color: #ffffff;
+}
+
+body.dark-mode .btn-primary {
+    background-color: #375a7f;
+    border-color: #375a7f;
+}
+
+body.dark-mode .btn-primary:hover {
+    background-color: #2b4764;
+    border-color: #2b4764;
+}
+
+body.dark-mode .btn-outline-dark {
+    color: #e0e0e0;
+    border-color: #e0e0e0;
+}
+
+body.dark-mode .btn-outline-dark:hover {
+    color: #121212;
+    background-color: #e0e0e0;
+}
+
+body.dark-mode a {
+    color: #6ea8fe;
+}
+
+body.dark-mode a:hover {
+    color: #9ec5fe;
+}
+
+body.dark-mode .text-muted {
+    color: #888 !important;
+}
+
+body.dark-mode .alert-danger {
+    background-color: #5c2323;
+    border-color: #842029;
+    color: #ea868f;
+}
+
+/* Dark mode styles for OTP input */
+body.dark-mode .otp-input {
+    background-color: #2c2c2c;
+    border-color: #444;
+    color: #e0e0e0;
+}
+
+body.dark-mode .otp-input:focus {
+    background-color: #3c3c3c;
+    border-color: #666;
+    color: #ffffff;
+}
+
+/* Dark mode styles for social login buttons */
+body.dark-mode .btn-outline-dark {
+    color: #e0e0e0;
+    border-color: #e0e0e0;
+}
+
+body.dark-mode .btn-outline-dark:hover {
+    color: #121212;
+    background-color: #e0e0e0;
+}
+
+body.dark-mode .btn-outline-dark .fab.fa-google {
+    color: #e0e0e0;
+}
+
+body.dark-mode .btn-outline-dark:hover .fab.fa-google {
+    color: #121212;
+}
+
+/* Adjust placeholder color for dark mode */
+body.dark-mode ::placeholder {
+    color: #888;
+}
+
+body.dark-mode ::-webkit-input-placeholder {
+    color: #888;
+}
+
+body.dark-mode ::-moz-placeholder {
+    color: #888;
+}
+
+body.dark-mode :-ms-input-placeholder {
+    color: #888;
+}
+
+body.dark-mode :-moz-placeholder {
+    color: #888;
+}
+    </style>
 </head>
 <body>
-    <div class="container mt-4">
-        {% block content %}
-        {% endblock %}
+    <div class="auth-container">
+        <div class="row g-0">
+            {% block content %}{% endblock %}
+        </div>
     </div>
-    {% comment %} <script>
+    <script>
         function updateCounts() {
             fetch('{% url "accounts:get_updated_counts" %}')
                 .then(response => response.json())
@@ -367,12 +519,12 @@
                 });
         }
         
-        // Update counts every 10 seconds
-        setInterval(updateCounts, 1000);
+        // Update counts every 30 seconds
+        setInterval(updateCounts, 30000);
         
         // Initial update
         updateCounts();
-    </script> {% endcomment %}
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.14.1/dist/sweetalert2.all.min.js"></script>
     <script>
         // Function to check if dark mode is active

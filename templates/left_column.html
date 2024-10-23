@@ -138,7 +138,8 @@
             <a class="nav-link {% if request.resolver_match.url_name == 'friend_list' %}active{% endif %}" href="{% url 'friends:friend_list' %}"><i class="fas fa-users me-2"></i> Friends</a>
             <a class="nav-link {% if request.resolver_match.url_name == 'profile' and request.resolver_match.kwargs.username == request.user.username %}active{% endif %}" 
             href="{% url 'accounts:profile' request.user.username %}">  
-                <i class="fas fa-user me-2"></i> Profile
+                <i class="fas fa-user me-2"></i> 
+                Profile
             </a>
             <a class="nav-link {% if request.resolver_match.url_name == 'friend_requests' %}active{% endif %}" href="{% url 'friends:friend_requests' %}"><i class="fas fa-user-plus me-2"></i> Friend Requests<i class="badge bg-danger ms-2">{{ friend_requests_count }}</i></a>
             <a class="nav-link {% if request.resolver_match.url_name == 'user_search' %}active{% endif %}" href="{% url 'friends:user_search' %}"><i class="fas fa-search me-2"></i> Search Users</a>
@@ -152,7 +153,7 @@
             <a class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}" href="{% url "accounts:home" %}"><i class="fas fa-home"></i></a>
             <a class="nav-link {% if request.resolver_match.url_name == 'friend_list' %}active{% endif %}" href="{% url 'friends:friend_list' %}"><i class="fas fa-users"></i></a>
             <a class="nav-link {% if request.resolver_match.url_name == 'user_search' %}active{% endif %}" href="{% url 'friends:user_search' %}"><i class="fas fa-search"></i></a>
-            <a class="nav-link {% if request.resolver_match.url_name == 'profile' %}active{% endif %}" href="{% url 'accounts:profile' user.username %}">{%if user.profile_pic %}<img src="{{ user.profile_pic.url }}" alt="Profile Picture" class="rounded-circle" style="width: 30px; height: 30px;">{% else %}<i class="fas fa-user"></i>{% endif %}</a>
+            <a class="nav-link {% if request.resolver_match.url_name == 'profile' %}active{% endif %}" href="{% url 'accounts:profile' user.username %}">{%if user.profile_pic %}<img src="{{ user.profile_pic.url }}" alt="Profile Picture" class="rounded-circle" style="width: 30px; height: 30px;">{% else %}<img src="{% static 'img/default_profile_pic.png' %}" alt="Default Profile Picture" class="rounded-circle" style="width: 30px; height: 30px;">{% endif %}</a>
         </nav>
     </div>
 

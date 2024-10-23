@@ -1,52 +1,37 @@
-{% extends 'base.html' %}
+{% extends 'accounts/auth_base.html' %}
 {% load socialaccount %}
 
-{% block title %}Register{% endblock %}
-{% block content %}
-
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h2 class="mb-0">Register</h2>
-                </div>
-                <div class="card-body">
-                    <form method="post">
-                        {% csrf_token %}
-                        <div class="mb-3">
-                            <label for="username" class="form-label">Username:</label>
-                            <input type="text" name="username" id="username" class="form-control" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="email" class="form-label">Email:</label>
-                            <input type="email" name="email" id="email" class="form-control" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="contact" class="form-label">Contact:</label>
-                            <input type="text" name="contact" id="contact" class="form-control" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="password" class="form-label">Password:</label>
-                            <input type="password" name="password" id="password" class="form-control" required>
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100">Register</button>
-                    </form>
-                    <div class="mt-3 text-center">
-                        Already have an account? <a href="{% url 'accounts:login' %}" class="text-decoration-none">Login</a>
-                    </div>
-                    <div class="mt-3">
-                        <p class="text-center">Or</p>
-                    </div>
-                    <div class="mt-3">
-                        <a href="{% provider_login_url 'google' %}
-                        " class="btn btn-outline-dark w-100">
-                            <i class="fab fa-google me-2"></i> Sign up with Google
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
+{% block auth_content %}
+<h2 class="mb-4">Register</h2>
+<form method="post">
+    {% csrf_token %}
+    <div class="mb-3">
+        <label for="username" class="form-label">Username:</label>
+        <input type="text" name="username" id="username" class="form-control" required>
     </div>
+    <div class="mb-3">
+        <label for="email" class="form-label">Email:</label>
+        <input type="email" name="email" id="email" class="form-control" required>
+    </div>
+    <div class="mb-3">
+        <label for="contact" class="form-label">Contact:</label>
+        <input type="text" name="contact" id="contact" class="form-control" required>
+    </div>
+    <div class="mb-3">
+        <label for="password" class="form-label">Password:</label>
+        <input type="password" name="password" id="password" class="form-control" required>
+    </div>
+    <button type="submit" class="btn btn-primary w-100">Register</button>
+</form>
+<div class="mt-3 text-center">
+    Already have an account? <a href="{% url 'accounts:login' %}" class="text-decoration-none">Login</a>
+</div>
+<div class="mt-3">
+    <p class="text-center">Or</p>
+</div>
+<div class="mt-3">
+    <a href="{% provider_login_url 'google' %}" class="btn btn-outline-dark w-100">
+        <i class="fab fa-google me-2"></i> Sign up with Google
+    </a>
 </div>
 {% endblock %}
