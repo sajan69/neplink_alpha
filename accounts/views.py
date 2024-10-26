@@ -189,7 +189,7 @@ class HomeView(LoginRequiredMixin, ListView):
             (models.Q(visibility='friends') & (models.Q(user__in=friends) | models.Q(user=user))) |
             (models.Q(visibility='private') & models.Q(user=user)) |
             (models.Q(visibility='selected') & (models.Q(selected_friends__friend=user) | models.Q(user=user)))
-        ).distinct().order_by('-created_at')
+        ).distinct().filter(is_hidden=False).order_by('-created_at')
 
     def get_context_data(self, **kwargs):
         """Add additional context data for the template."""
@@ -363,7 +363,7 @@ class ProfileView(LoginRequiredMixin, DetailView):
             context['action'] = 'add_friend'
 
          # Fetch and paginate posts
-        posts = Post.objects.filter(user=viewed_user).order_by('-created_at')
+        posts = Post.objects.filter(user=viewed_user).filter(is_hidden=False).order_by('-created_at')
         posts_paginator = Paginator(posts, self.paginate_by)
         posts_page_number = self.request.GET.get('posts_page', 1)
         posts_page = posts_paginator.get_page(posts_page_number)
